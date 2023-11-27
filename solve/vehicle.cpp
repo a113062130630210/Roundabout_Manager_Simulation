@@ -67,7 +67,7 @@ bool subtrajectory::conflict_with(const subtrajectory& t) const {
 
 
 trajectory::trajectory(bool e, double t, double ep, double lp, double v)
-  : is_entry(e), length(lp - ep), entry_time(t), leave_time(t)
+  : is_entry(e), entry_time(t), leave_time(t)
   , entry_position(ep), leave_position(lp), entry_velocity(v), leave_velocity(v)
   , sub_trajs(std::vector<subtrajectory>()) {}
 
@@ -134,9 +134,10 @@ bool trajectory::place_on_top(const trajectory& t) {
 
 bool trajectory::avoid_front(const trajectory& target) {
   // temparary instances to help the calculation
+  const double length = target.leave_position - target.entry_position;
   vehicle veh(-1, -1, -1, leave_time, leave_velocity);
   veh.current_position = leave_position;
-  trajectory nxt_traj = veh.max_velocity(target.length);
+  trajectory nxt_traj = veh.max_velocity(length);
 
   double distance_left = 0; // the distance between the end of the section & the start posiion of current sub-trajectory
 
@@ -173,7 +174,7 @@ bool trajectory::avoid_front(const trajectory& target) {
 
         veh.arrival_time  = m + t;
         veh.init_velocity = v;
-        nxt_traj = veh.max_velocity(target.length);
+        nxt_traj = veh.max_velocity(length);
 
         // the next trajactory can be legally put on top of the target, 
         // set the current state as best solution, decelerate later
@@ -204,7 +205,7 @@ bool trajectory::avoid_front(const trajectory& target) {
 
     veh.arrival_time  = it->entry_time;
     veh.init_velocity = it->entry_velocity;
-    nxt_traj = veh.max_velocity(target.length);
+    nxt_traj = veh.max_velocity(length);
 
     sub_trajs.pop_back();    
     it = sub_trajs.end() - 1;

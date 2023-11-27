@@ -31,7 +31,6 @@ struct trajectory {
   trajectory& push_sub_traj(double, double);
 
   bool is_entry; // TODO: for future features
-  double length; // TODO: delete
   double entry_time;
   double leave_time;
   double entry_position;
