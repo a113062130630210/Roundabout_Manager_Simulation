@@ -45,9 +45,9 @@ tangent_solver(double t1, double x1, double v1, double a1, double t2, double x2,
   double C = term*term + (a2 - MIN_A) * (2 * (x1 - x2 - v1*t1 + v2*t2) + a1*t1*t1 - a2*t2*t2);
 
   double T1, T2;
-  if (fabs(A) <= 1e-10) {
+  if (fabs(A) <= 1e-10) { // a1 == MIN_A || a1 == a2
     if (fabs(B) <= 1e-10) {
-      if (C < -1e-10) return std::nullopt;
+      if (C <= -1e-10) return std::nullopt;
       return std::make_pair(std::make_pair(t1, t1), std::make_pair(t1, t1));
     }
 

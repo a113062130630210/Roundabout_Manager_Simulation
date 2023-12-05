@@ -9,7 +9,7 @@
 #define MAX_A 3.
 
 // should be a positive number
-#define MAX_V 10.
+#define MAX_V 15.
 
 // should be a positive number
 #define TIME_GAP 1.5

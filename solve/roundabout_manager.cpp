@@ -27,14 +27,12 @@ void roundabout_manager::solve() {
     }
   }
 
-  // make sure modified arrival_time is reasonable (i.e. cause no conflict with front car)
-
   std::cout << "Solved." << std::endl;
 }
 
 trajectory roundabout_manager::schedule_first_vehicle(section& sec) {
   if (!sec.unscheduled.size()) {
-    EXIT("[RANGE_ERROR] roundabout_manager::schedule_first_vehicle");
+    EXIT("[RANGE_ERROR] roundabout_manager::schedule_first_vehicle\nThere is no unscheduled vehicle.");
   }
 
   int sec_id = sec.index;
@@ -42,7 +40,9 @@ trajectory roundabout_manager::schedule_first_vehicle(section& sec) {
   vehicle veh = sec.unscheduled.front();
   std::vector<trajectory> stack;
 
+
   do {
+    std::cout << "Scheduling vehicle " << veh.id << ", section " << sec_id << std::endl;
     int nxt_sec_id = sec_id == _r.section_count() - 1 ? 0 : sec_id + 1;
     const section& cur_sec = _r.section_at(sec_id);
     trajectory traj = veh.max_velocity(cur_sec.length);
@@ -82,6 +82,7 @@ trajectory roundabout_manager::schedule_first_vehicle(section& sec) {
 
   sec_id = sec.index;
   for (auto& t: stack) {
+    // TODO: make sure section::scheduled is sorted by arrival time
     section& tmp_sec = _r.section_at(sec_id);
     tmp_sec.scheduled.push_back(t);
 
