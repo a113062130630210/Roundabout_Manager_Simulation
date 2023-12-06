@@ -74,10 +74,7 @@ trajectory::trajectory(bool e, double t, double ep, double lp, double v)
 // the trajectory should directly come from vehicle::max_velocity
 bool trajectory::place_on_top(const trajectory& t) {
   if (sub_trajs.empty() || t.sub_trajs.empty()) {
-    EXIT("[ERROR] place_on_top\nlist empty");
-  }
-  if (entry_position != t.entry_position) {
-    EXIT("[ERROR] place_on_top\nposition not aligned");
+    EXIT("[ERROR] place_on_top\ngot empty list");
   }
 
   auto s_it = sub_trajs.begin();
@@ -141,20 +138,19 @@ bool trajectory::place_on_top(const trajectory& t) {
 
 bool trajectory::avoid_front(const trajectory& target) {
   // temparary instances to help the calculation
-  const double length = target.leave_position - target.entry_position;
+  const double length = target.leave_position - leave_position;
   vehicle veh(-1, -1, -1, leave_time, leave_velocity);
   veh.current_position = leave_position;
 
   auto nxt_traj = veh.max_velocity(length);
   if (nxt_traj.place_on_top(target)) return true;
 
-  double distance_left = 0; // the distance between the end of the section & the start posiion of current sub-trajectory
+  // the distance between the end of the section & the start posiion of current sub-trajectory
+  double distance_left = 0;
 
   // start from the last sub-trajectory
   auto it = sub_trajs.end() - 1;
-  while (true) {
-    if (it < sub_trajs.begin()) break;
-
+  while (it >= sub_trajs.begin()) {
     distance_left += it->leave_position - it->entry_position;
 
     // binary search the best timing to decelerate
@@ -242,7 +238,7 @@ trajectory& trajectory::push_sub_traj(double end_time, double acc) {
 
   if (fabs(end_time - et) <= 1e-10) return *this;
   if (end_time < et) {
-    EXIT("[RANGE_ERROR] trajectory::push_sub_traj 2");
+    EXIT("[ERROR] trajectory::push_sub_traj\ninfeasible end time");
   }
 
   double t = end_time - et;
@@ -250,7 +246,7 @@ trajectory& trajectory::push_sub_traj(double end_time, double acc) {
   double lv = ev + acc * t;
 
   if (lx > leave_position + 1e-10) {
-    EXIT("[RANGE_ERROR] trajectory::push_sub_traj\nposition out of range");
+    EXIT("[ERROR] trajectory::push_sub_traj\nposition out of range");
   }
 
   leave_time = end_time;

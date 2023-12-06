@@ -1,6 +1,7 @@
 #include "roundabout_manager.hpp"
 
-roundabout_manager::roundabout_manager(roundabout& r, std::vector<vehicle>& vs): _r(r), _vs(vs) {
+roundabout_manager::roundabout_manager
+(roundabout& r, std::vector<vehicle>& vs): _r(r), _vs(vs) {
   for (auto& v: vs) {
     v.current_position = _r.position_of(v.entry);
   }
@@ -11,7 +12,7 @@ void roundabout_manager::solve() {
 
   const int M = _r.section_count();
 
-  std::sort(_vs.begin(), _vs.end(), [](vehicle& a, vehicle& b) {
+  std::sort(_vs.begin(), _vs.end(), [](auto& a, auto& b) {
     return a.arrival_time < b.arrival_time;
   });
 
@@ -32,59 +33,83 @@ void roundabout_manager::solve() {
 
 trajectory roundabout_manager::schedule_first_vehicle(section& sec) {
   if (!sec.unscheduled.size()) {
-    EXIT("[RANGE_ERROR] roundabout_manager::schedule_first_vehicle\nThere is no unscheduled vehicle.");
+    EXIT(
+      "[ERROR] roundabout_manager::schedule_first_vehicle\n"
+      "There is no unscheduled vehicle."
+    );
   }
 
   int sec_id = sec.index;
   bool is_entry = true;
   vehicle veh = sec.unscheduled.front();
-  std::vector<trajectory> stack;
-
+  std::vector<trajectory> trajs;
 
   do {
-    std::cout << "Scheduling vehicle " << veh.id << ", section " << sec_id << std::endl;
+    std::cout << "Scheduling vehicle ";
+    std::cout << veh.id << ", section " << sec_id << std::endl;
+
     int nxt_sec_id = sec_id == _r.section_count() - 1 ? 0 : sec_id + 1;
-    const section& cur_sec = _r.section_at(sec_id);
+    section& cur_sec = _r.section_at(sec_id);
     trajectory traj = veh.max_velocity(cur_sec.length);
     traj.is_entry = is_entry;
 
-    if (cur_sec.scheduled.size()) {
-      const trajectory& top_traj = cur_sec.scheduled.back();
-      bool success = traj.place_on_top(top_traj);
-      if (!success) {
-        EXIT("[DEBUG] ok this happens (place_on_top not success)");
+    if (cur_sec.unscheduled_before(traj.entry_time)) {
+      const trajectory& top_traj = schedule_first_vehicle(cur_sec);
+      if (!traj.place_on_top(top_traj)) {
+        std::stack<trajectory> wayback_trajs;
+
+        do {
+          trajectory& prev_traj = trajs.back();
+          if (prev_traj.avoid_front(top_traj)) break;
+
+          trajs.pop_back();
+          wayback_trajs.push(prev_traj);
+        } while (true);
+
+        double entry_time = trajs.back().leave_time;
+        double entry_velocity = trajs.back().leave_velocity;
+        while (!wayback_trajs.empty()) {
+          trajectory& t = wayback_trajs.top();
+          t.sub_trajs.clear();
+          t.entry_time = entry_time;
+          t.entry_velocity = entry_velocity;
+          t.push_sub_traj(-1, MIN_A);
+
+          trajs.push_back(t);
+
+          wayback_trajs.pop();
+          entry_time = t.leave_time;
+          entry_velocity = t.leave_velocity;
+        }
+
+        veh.arrival_time = entry_time;
+        veh.init_velocity = entry_velocity;
+        traj = veh.max_velocity(cur_sec.length);
+        if (!traj.place_on_top(top_traj)) {
+          EXIT(
+            "[ERROR] roundabout_manager::schedule_first_vehicle\n"
+            "this should not happen"
+          );
+        }
       }
     }
 
-    std::optional<trajectory> front_traj = std::nullopt;
-    section& nxt_sec = _r.section_at(nxt_sec_id);
-    while (nxt_sec.unscheduled_before(traj.leave_time)) {
-      front_traj = schedule_first_vehicle(nxt_sec);
-    }
-    if (front_traj) {
-      bool success = traj.avoid_front(front_traj.value());
-      if (!success) {
-        EXIT("[DEBUG] ok this happens (avoid_front not success)");
-      }
-    }
-    
-    _vs[veh.id].trajs.push_back(std::make_pair(sec_id, traj));
-    stack.push_back(traj);
+    trajs.push_back(traj);
 
     sec_id = nxt_sec_id;
     is_entry = false;
 
-    veh.entry = sec_id;
     veh.arrival_time = traj.leave_time;
     veh.current_position = _r.position_of(sec_id);
     veh.init_velocity = traj.leave_velocity;
   } while (sec_id != veh.exit);
 
   sec_id = sec.index;
-  for (auto& t: stack) {
+  for (auto& t: trajs) {
     // TODO: make sure section::scheduled is sorted by arrival time
     section& tmp_sec = _r.section_at(sec_id);
     tmp_sec.scheduled.push_back(t);
+    _vs[veh.id].trajs.push_back(std::make_pair(sec_id, t));
 
     // pushes all vehicles in the same section upward
     // to avoid violating safety constraint
@@ -100,5 +125,5 @@ trajectory roundabout_manager::schedule_first_vehicle(section& sec) {
 
   sec.unscheduled.erase(sec.unscheduled.begin());
 
-  return stack[0];
+  return trajs[0];
 }

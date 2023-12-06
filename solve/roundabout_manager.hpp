@@ -1,9 +1,8 @@
 #pragma once
 
 #include <algorithm>
-#include <iostream>
+#include <stack>
 #include <optional>
-#include <utility>
 
 #include "roundabout.hpp"
 #include "vehicle.hpp"
