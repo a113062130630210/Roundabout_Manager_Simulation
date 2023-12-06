@@ -11,10 +11,10 @@ std::optional<std::pair<double, double>> quadratic_solver(
   double B = v1 - v2 - a1*t1 + a2*t2;
   double C = x1 - x2 - v1*t1 + v2*t2 + (a1*t1*t1 - a2*t2*t2) / 2;
 
-  // the leading coef is zero, solve it as a line
-  if (A == 0) {
-    // constants are treated as no solution
-    if (B == 0) return std::nullopt;
+  // the leading coef is zero, solve it as a linear equation
+  if (fabs(A) <= 1e-10) {
+    // parallel parabollas are treated as no solution
+    if (fabs(B) <= 1e-10) return std::nullopt;
 
     double R = -C / B;
     return std::make_pair(R, R);

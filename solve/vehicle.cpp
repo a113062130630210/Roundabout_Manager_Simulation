@@ -5,66 +5,45 @@ subtrajectory::subtrajectory
     entry_time(et), leave_time(lt), entry_position(ep), leave_position(lp), 
     entry_velocity(ev), leave_velocity(lv), acc(a) {}
 
-bool subtrajectory::conflict_with(const subtrajectory& t) const {
-  if (entry_position <= t.entry_position) {
-    double distance = t.entry_position - entry_position;
-    double time;
-    if (acc == 0) {
-      if (entry_velocity == 0) EXIT("[ERROR] trajectory::is_conflict ??? 1");
-      time = distance / entry_velocity;
+bool subtrajectory::conflict_with(const subtrajectory& traj) const {
+  // check if `traj` is above `*this`
+  {
+    bool this_is_front = entry_position > traj.entry_position;
+    const subtrajectory& front = this_is_front ? *this : traj;
+    const subtrajectory& back  = this_is_front ? traj : *this;
+
+    if (back.acc == 0 && back.entry_velocity == 0) {
+      EXIT("[ERROR] trajectory::is_conflict\nthis should not happen");
     }
-    else {
-      time = (-entry_velocity + sqrt(entry_velocity*entry_velocity + 2*acc*distance)) / acc;
-    }
-    if (time + entry_time < t.entry_time + TIME_GAP) return true;
-  }
-  else {
-    double distance = entry_position - t.entry_position;
-    double time;
-    if (t.acc == 0) {
-      if (t.entry_velocity == 0) EXIT("[ERROR] trajectory::is_conflict ??? 2");
-      time = distance / t.entry_velocity;
-    }
-    else {
-      time = (-t.entry_velocity + sqrt(t.entry_velocity*t.entry_velocity + 2*t.acc*distance)) / t.acc;
-    }
-    if (entry_time < time + t.entry_time + TIME_GAP) return true;
+
+    double d = front.entry_position - back.entry_position;
+    double a = back.acc;
+    double v = back.entry_velocity;
+    double t = back.entry_time;
+
+    double time_at_front_position = a == 0 ?
+      d/v + t : (sqrt(v*v + 2*a*d) - v) / a + t;
+
+    if (
+      (this_is_front && time_at_front_position + TIME_GAP > entry_time) ||
+      (!this_is_front && traj.entry_time + TIME_GAP > time_at_front_position)
+    ) return true;
   }
 
-  if (leave_position <= t.leave_position) {
-    double distance = leave_position - t.entry_position;
-    double time;
-    if (t.acc == 0) {
-      if (t.entry_velocity == 0) EXIT("[ERROR] trajectory::is_conflict ??? 3");
-      time = distance / t.entry_velocity;
-    }
-    else {
-      time = (-t.entry_velocity + sqrt(t.entry_velocity*t.entry_velocity + 2*t.acc*distance)) / t.acc;
-    }
-    if (leave_time < time + t.entry_time + TIME_GAP) return true;
-  }
-  else {
-    double distance = t.leave_position - entry_position;
-    double time;
-    if (acc == 0) {
-      if (entry_velocity == 0) EXIT("[ERROR] trajectory::is_conflict ??? 4");
-      time = distance / entry_velocity;
-    }
-    else {
-      time = (-entry_velocity + sqrt(entry_velocity*entry_velocity + 2*acc*distance)) / acc;
-    }
-    if (time + entry_time < t.leave_time + TIME_GAP) return true;
-  }
-
+  // check if `*this` and `traj` intersects
   auto s = quadratic_solver(
-    entry_time             ,   entry_position,   entry_velocity,   acc, 
-    t.entry_time + TIME_GAP, t.entry_position, t.entry_velocity, t.acc
+         entry_time           ,      entry_position,      entry_velocity,      acc, 
+    traj.entry_time + TIME_GAP, traj.entry_position, traj.entry_velocity, traj.acc
   );
   if (!s) return false;
 
-  double l_bound = std::max(entry_time, t.entry_time);
-  double r_bound = std::max(leave_time, t.leave_time);
-  return (l_bound < s->first && s->first < r_bound) || (l_bound < s->second && s->second < r_bound);
+  // check if any of the intersection points is in the range of trajectories
+  double l_bound = std::max(entry_time, traj.entry_time);
+  double r_bound = std::max(leave_time, traj.leave_time);
+  return (
+    (l_bound < s->first && s->first < r_bound) || 
+    (l_bound < s->second && s->second < r_bound)
+  );
 };
 
 
