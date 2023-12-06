@@ -1,7 +1,9 @@
 #include "vehicle.hpp"
 
-subtrajectory::subtrajectory(double et, double lt, double ep, double lp, double ev, double lv, double a):
-  entry_time(et), leave_time(lt), entry_position(ep), leave_position(lp), entry_velocity(ev), leave_velocity(lv), acc(a) {}
+subtrajectory::subtrajectory
+(double et, double lt, double ep, double lp, double ev, double lv, double a):
+    entry_time(et), leave_time(lt), entry_position(ep), leave_position(lp), 
+    entry_velocity(ev), leave_velocity(lv), acc(a) {}
 
 bool subtrajectory::conflict_with(const subtrajectory& t) const {
   if (entry_position <= t.entry_position) {
@@ -66,10 +68,10 @@ bool subtrajectory::conflict_with(const subtrajectory& t) const {
 };
 
 
-trajectory::trajectory(bool e, double t, double ep, double lp, double v)
-  : is_entry(e), entry_time(t), leave_time(t)
-  , entry_position(ep), leave_position(lp), entry_velocity(v), leave_velocity(v)
-  , sub_trajs(std::vector<subtrajectory>()) {}
+trajectory::trajectory(bool e, double t, double ep, double lp, double v): 
+    is_entry(e), entry_time(t), leave_time(t), entry_position(ep), 
+    leave_position(lp), entry_velocity(v), leave_velocity(v), 
+    sub_trajs(std::vector<subtrajectory>()) {}
 
 // the trajectory should directly come from vehicle::max_velocity
 bool trajectory::place_on_top(const trajectory& t) {

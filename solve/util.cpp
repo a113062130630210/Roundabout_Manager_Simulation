@@ -2,8 +2,10 @@
 
 // x1 + v1*(t - t1) + a1/2*(t - t1)^2 = x2 + v2*(t - t2) + a2/2*(t - t2)^2
 // solve t
-std::optional<std::pair<double, double>>
-quadratic_solver(double t1, double x1, double v1, double a1, double t2, double x2, double v2, double a2) {
+std::optional<std::pair<double, double>> quadratic_solver(
+  double t1, double x1, double v1, double a1, 
+  double t2, double x2, double v2, double a2
+) {
   // coefficients of the new parabola
   double A = (a1 - a2) / 2;
   double B = v1 - v2 - a1*t1 + a2*t2;
@@ -27,7 +29,10 @@ quadratic_solver(double t1, double x1, double v1, double a1, double t2, double x
 }
 
 std::optional<std::pair<std::pair<double, double>, std::pair<double, double>>>
-tangent_solver(double t1, double x1, double v1, double a1, double t2, double x2, double v2, double a2) {
+tangent_solver(
+  double t1, double x1, double v1, double a1, 
+  double t2, double x2, double v2, double a2
+) {
   double term = v1 - v2 - a1*t1 + a2*t2;
 
   if (MIN_A == a2) {
@@ -42,7 +47,8 @@ tangent_solver(double t1, double x1, double v1, double a1, double t2, double x2,
 
   double A = (a1 - MIN_A) * (a1 - a2);
   double B = 2 * (a1 - MIN_A) * term;
-  double C = term*term + (a2 - MIN_A) * (2 * (x1 - x2 - v1*t1 + v2*t2) + a1*t1*t1 - a2*t2*t2);
+  double C = term*term +
+    (a2 - MIN_A) * (2 * (x1 - x2 - v1*t1 + v2*t2) + a1*t1*t1 - a2*t2*t2);
 
   double T1, T2;
   if (fabs(A) <= 1e-10) { // a1 == MIN_A || a1 == a2
