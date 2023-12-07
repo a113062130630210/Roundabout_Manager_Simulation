@@ -11,10 +11,8 @@ int main() {
 
   // TODO: test wrap around
   std::vector<vehicle> vs;
-  vs.push_back(vehicle({ 0, 0, 7, 0, 0 }));
-  vs.push_back(vehicle({ 1, 4, 7, 3, 0 }));
-  // vs.push_back(vehicle({ 2, 4, 7, 4, 0 }));
-  // vs.push_back(vehicle({ 3, 6, 7, 6, 0 }));
+  vs.push_back(vehicle({ 0, 6, 7, 6.4, 0 }));
+  vs.push_back(vehicle({ 1, 0, 7, 0, 0 }));
 
   // std::cout << "Received Vehicles: \n";
   // for (auto& v: vs) {

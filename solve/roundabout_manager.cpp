@@ -54,17 +54,19 @@ trajectory roundabout_manager::schedule_first_vehicle(section& sec) {
     traj.is_entry = is_entry;
 
     if (cur_sec.unscheduled_before(traj.entry_time)) {
-      const trajectory& top_traj = schedule_first_vehicle(cur_sec);
+      schedule_first_vehicle(cur_sec);
+    }
+
+    if (!cur_sec.scheduled.empty()) {
+      const trajectory& top_traj = cur_sec.scheduled.back();
       if (!traj.place_on_top(top_traj)) {
         std::stack<trajectory> wayback_trajs;
 
-        do {
-          trajectory& prev_traj = trajs.back();
-          if (prev_traj.avoid_front(top_traj)) break;
-
+        for (auto prev = trajs.rbegin(); prev != trajs.rend(); ++prev) {
+          if (prev->avoid_front(top_traj)) break;
           trajs.pop_back();
-          wayback_trajs.push(prev_traj);
-        } while (true);
+          wayback_trajs.push(*prev);
+        }
 
         double entry_time = trajs.back().leave_time;
         double entry_velocity = trajs.back().leave_velocity;
