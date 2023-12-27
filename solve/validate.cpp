@@ -249,6 +249,7 @@ int main(int argc, char* argv[]) {
 	check_input_file_is_valid_format(input_filename);
 	check_output_file_is_valid_format(output_filename);
 
+	// TODO: exit time should exceed earlist arrival time
 	check_acceleration_constraint();
 	check_velocity_constraint();
 	check_no_overtaking();
