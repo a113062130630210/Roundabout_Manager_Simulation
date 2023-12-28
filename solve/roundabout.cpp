@@ -8,6 +8,10 @@ bool section::unscheduled_before(double time) const {
   return unscheduled.size() != 0 && unscheduled[0].arrival_time < time;
 }
 
+roundabout::roundabout() {
+  roundabout(0, {});
+}
+
 roundabout::roundabout(const int c, const std::vector<double>& l): 
     _section_count(c), _sections(std::vector<section>()) {
   double s = 0;

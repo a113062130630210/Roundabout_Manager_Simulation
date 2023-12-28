@@ -5,12 +5,7 @@
 #include "constants.hpp"
 #include "roundabout_manager.hpp"
 
-roundabout_manager::roundabout_manager
-(roundabout& r, std::vector<vehicle>& vs): _r(r), _vs(vs), _solved(false) {
-  for (auto& v: _vs) {
-    v.current_position = _r.position_of(v.entry);
-  }
-}
+roundabout_manager::roundabout_manager(): _solved(false) {}
 
 void roundabout_manager::solve() {
   std::cout << "Solving..." << std::endl;
@@ -35,31 +30,6 @@ void roundabout_manager::solve() {
 
   _solved = true;
   std::cout << "Solved." << std::endl;
-}
-
-void roundabout_manager::print_result
-(const std::string& latex_name, const std::string& format_name) {
-  if (!_solved) {
-    std::cout << "The problem haven't been solved yet." << std::endl;
-    solve();
-  }
-
-  std::ofstream latex_file, format_file;
-  latex_file.open(latex_name);
-  format_file.open(format_name);
-
-  format_file << _vs.size() << std::endl;
-  for (auto& v: _vs) {
-    for (auto& [_, traj]: v.trajs) {
-      latex_file << traj;
-
-      for (auto& st: traj.sub_trajs) {
-        format_file << st.entry_time << " " << st.acc << " ";
-      }
-    }
-    latex_file << std::endl;
-    format_file << std::endl;
-  }
 }
 
 trajectory roundabout_manager::schedule_first_vehicle(section& sec) {
@@ -159,4 +129,47 @@ trajectory roundabout_manager::schedule_first_vehicle(section& sec) {
   sec.unscheduled.erase(sec.unscheduled.begin());
 
   return trajs[0];
+}
+
+void roundabout_manager::load_input() {
+  std::cout << "No input file is provided, using default settings." << std::endl;
+
+  _r = roundabout(8, { 10, 10, 10, 10, 10, 10, 10, 10 });
+
+  // TODO: test wrap around
+  _vs.push_back(vehicle({ 0, 6, 7, 6.4, 0 }));
+  _vs.push_back(vehicle({ 1, 0, 7, 0, 0 }));
+
+  for (auto& v: _vs) {
+    v.current_position = _r.position_of(v.entry);
+  }
+}
+
+void roundabout_manager::load_input(const std::string&) {
+  // TODO: load input from file
+  load_input();
+}
+
+void roundabout_manager::print_result
+(const std::string& latex_name, const std::string& format_name) const {
+  if (!_solved) {
+    EXIT("The problem haven't been solved yet.");
+  }
+
+  std::ofstream latex_file, format_file;
+  latex_file.open(latex_name);
+  format_file.open(format_name);
+
+  format_file << _vs.size() << std::endl;
+  for (auto& v: _vs) {
+    for (auto& [_, traj]: v.trajs) {
+      latex_file << traj;
+
+      for (auto& st: traj.sub_trajs) {
+        format_file << st.entry_time << " " << st.acc << " ";
+      }
+    }
+    latex_file << std::endl;
+    format_file << std::endl;
+  }
 }

@@ -18,6 +18,7 @@ struct section {
 
 class roundabout {
 public:
+  roundabout();
   roundabout(const int, const std::vector<double>&);
 
   int section_count() const;
@@ -26,6 +27,6 @@ public:
   section& section_at(int);
 
 private:
-  const int _section_count;
+  int _section_count;
   std::vector<section> _sections;
 };

@@ -5,10 +5,12 @@
 
 class roundabout_manager {
 public:
-  roundabout_manager(roundabout&, std::vector<vehicle>&);
+  roundabout_manager();
 
+  void load_input();
+  void load_input(const std::string&);
   void solve();
-  void print_result(const std::string&, const std::string&);
+  void print_result(const std::string&, const std::string&) const;
 
 private:
   roundabout _r;
