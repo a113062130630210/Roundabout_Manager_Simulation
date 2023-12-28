@@ -1,0 +1,1 @@
+./build/run.exe latex.txt format.txt

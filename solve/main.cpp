@@ -1,10 +1,15 @@
 #include <vector>
 
+#include "constants.hpp"
 #include "roundabout.hpp"
 #include "roundabout_manager.hpp"
 #include "vehicle.hpp"
 
-int main() {
+int main(int argc, char *argv[]) {
+  if (argc != 3) {
+    EXIT("Please provide the output files.");
+  }
+
   roundabout r(8, { 10, 10, 10, 10, 10, 10, 10, 10 });
 
   // TODO: test wrap around
@@ -14,7 +19,7 @@ int main() {
 
   roundabout_manager rm(r, vs);
   rm.solve();
-  rm.print_result();
+  rm.print_result(argv[1], argv[2]);
 
   return 0;
 }

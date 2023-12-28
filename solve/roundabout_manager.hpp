@@ -8,7 +8,7 @@ public:
   roundabout_manager(roundabout&, std::vector<vehicle>&);
 
   void solve();
-  void print_result();
+  void print_result(const std::string&, const std::string&);
 
 private:
   roundabout _r;

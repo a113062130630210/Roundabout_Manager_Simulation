@@ -37,15 +37,16 @@ void roundabout_manager::solve() {
   std::cout << "Solved." << std::endl;
 }
 
-void roundabout_manager::print_result() {
+void roundabout_manager::print_result
+(const std::string& latex_name, const std::string& format_name) {
   if (!_solved) {
     std::cout << "The problem haven't been solved yet." << std::endl;
     solve();
   }
 
   std::ofstream latex_file, format_file;
-  latex_file.open("trajectories.txt");
-  format_file.open("format.txt");
+  latex_file.open(latex_name);
+  format_file.open(format_name);
 
   format_file << _vs.size() << std::endl;
   for (auto& v: _vs) {
