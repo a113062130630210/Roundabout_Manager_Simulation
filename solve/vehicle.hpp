@@ -1,10 +1,7 @@
 #pragma once
 
-#include <tuple>
+#include <iostream>
 #include <vector>
-
-#include "constants.hpp"
-#include "util.hpp"
 
 struct subtrajectory {
   subtrajectory(double, double, double, double, double, double, double);

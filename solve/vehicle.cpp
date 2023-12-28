@@ -1,3 +1,8 @@
+#include <cmath>
+#include <tuple>
+
+#include "constants.hpp"
+#include "util.hpp"
 #include "vehicle.hpp"
 
 subtrajectory::subtrajectory

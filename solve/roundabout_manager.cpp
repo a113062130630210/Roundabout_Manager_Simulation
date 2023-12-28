@@ -1,9 +1,8 @@
 #include <algorithm>
 #include <fstream>
-#include <iostream>
 #include <stack>
-#include <optional>
 
+#include "constants.hpp"
 #include "roundabout_manager.hpp"
 
 roundabout_manager::roundabout_manager

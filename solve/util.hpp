@@ -1,11 +1,7 @@
 #pragma once
 
-#include <cmath>
-#include <limits>
 #include <optional>
 #include <utility>
-
-#include "constants.hpp"
 
 std::optional<std::pair<double, double>>
 quadratic_solver

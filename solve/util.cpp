@@ -1,3 +1,7 @@
+#include <cmath>
+#include <limits>
+
+#include "constants.hpp"
 #include "util.hpp"
 
 // x1 + v1*(t - t1) + a1/2*(t - t1)^2 = x2 + v2*(t - t2) + a2/2*(t - t2)^2
