@@ -1,5 +1,3 @@
-#include <iostream>
-#include <fstream>
 #include <vector>
 
 #include "roundabout.hpp"
@@ -14,24 +12,9 @@ int main() {
   vs.push_back(vehicle({ 0, 6, 7, 6.4, 0 }));
   vs.push_back(vehicle({ 1, 0, 7, 0, 0 }));
 
-  // std::cout << "Received Vehicles: \n";
-  // for (auto& v: vs) {
-  //   std::cout << v << std::endl;
-  // }
-  // std::cout << std::endl;
-
   roundabout_manager rm(r, vs);
   rm.solve();
-
-  std::ofstream file;
-  file.open("trajectories.txt");
-  for (auto& v: vs) {
-    // std::cout << "[Vehicle " << v.id << "]\n";
-    for (auto& [_, t]: v.trajs) {
-      file << t;
-    }
-    file << std::endl;
-  }
+  rm.print_result();
 
   return 0;
 }

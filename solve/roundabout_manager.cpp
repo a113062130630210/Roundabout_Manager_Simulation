@@ -1,8 +1,14 @@
+#include <algorithm>
+#include <fstream>
+#include <iostream>
+#include <stack>
+#include <optional>
+
 #include "roundabout_manager.hpp"
 
 roundabout_manager::roundabout_manager
-(roundabout& r, std::vector<vehicle>& vs): _r(r), _vs(vs) {
-  for (auto& v: vs) {
+(roundabout& r, std::vector<vehicle>& vs): _r(r), _vs(vs), _solved(false) {
+  for (auto& v: _vs) {
     v.current_position = _r.position_of(v.entry);
   }
 }
@@ -28,7 +34,32 @@ void roundabout_manager::solve() {
     }
   }
 
+  _solved = true;
   std::cout << "Solved." << std::endl;
+}
+
+void roundabout_manager::print_result() {
+  if (!_solved) {
+    std::cout << "The problem haven't been solved yet." << std::endl;
+    solve();
+  }
+
+  std::ofstream latex_file, format_file;
+  latex_file.open("trajectories.txt");
+  format_file.open("format.txt");
+
+  format_file << _vs.size() << std::endl;
+  for (auto& v: _vs) {
+    for (auto& [_, traj]: v.trajs) {
+      latex_file << traj;
+
+      for (auto& st: traj.sub_trajs) {
+        format_file << st.entry_time << " " << st.acc << " ";
+      }
+    }
+    latex_file << std::endl;
+    format_file << std::endl;
+  }
 }
 
 trajectory roundabout_manager::schedule_first_vehicle(section& sec) {

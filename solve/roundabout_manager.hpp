@@ -1,9 +1,5 @@
 #pragma once
 
-#include <algorithm>
-#include <stack>
-#include <optional>
-
 #include "roundabout.hpp"
 #include "vehicle.hpp"
 
@@ -12,9 +8,12 @@ public:
   roundabout_manager(roundabout&, std::vector<vehicle>&);
 
   void solve();
-  trajectory schedule_first_vehicle(section&);
+  void print_result();
 
 private:
   roundabout _r;
-  std::vector<vehicle>& _vs;
+  std::vector<vehicle> _vs;
+  bool _solved;
+
+  trajectory schedule_first_vehicle(section&);
 };
