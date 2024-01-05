@@ -54,7 +54,7 @@ trajectory roundabout_manager::schedule_first_vehicle(section& sec) {
     trajectory traj = veh.max_velocity(cur_sec.length);
     traj.is_entry = is_entry;
 
-    if (cur_sec.unscheduled_before(traj.entry_time)) {
+    while (cur_sec.unscheduled_before(traj.entry_time)) {
       schedule_first_vehicle(cur_sec);
     }
 
