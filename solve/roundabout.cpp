@@ -1,12 +1,6 @@
 #include "roundabout.hpp"
 
-section::section(int i, double l, double p):
-    index(i), length(l), position(p), unscheduled(std::vector<vehicle>()), 
-    scheduled(std::vector<trajectory>()) {}
-
-bool section::unscheduled_before(double time) const {
-  return unscheduled.size() != 0 && unscheduled[0].arrival_time < time;
-}
+section::section(int i, double l, double p): index(i), length(l), position(p) {}
 
 roundabout::roundabout() {
   roundabout(0, {});

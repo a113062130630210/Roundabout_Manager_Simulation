@@ -1,19 +1,13 @@
 #pragma once
 
-#include <vector>
-
 #include "vehicle.hpp"
 
 struct section {
   section(int, double, double);
 
-  bool unscheduled_before(double) const;
-
   const int index;
   const double length;
   const double position;
-  std::vector<vehicle> unscheduled;
-  std::vector<trajectory> scheduled;
 };
 
 class roundabout {

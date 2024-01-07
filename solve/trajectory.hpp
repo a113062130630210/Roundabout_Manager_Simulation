@@ -18,13 +18,12 @@ struct subtrajectory {
 };
 
 struct trajectory {
-  trajectory(bool, double, double, double, double);
+  trajectory(double, double, double, double);
 
   bool place_on_top(const trajectory&);
   bool avoid_front(const trajectory&);
   trajectory& push_sub_traj(double, double);
 
-  bool is_entry; // TODO: for future features
   double entry_time;
   double leave_time;
   double entry_position;

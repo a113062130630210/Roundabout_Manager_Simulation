@@ -9,7 +9,7 @@ vehicle::vehicle(int i, int in, int out, double at, double iv)
 // returns the trajectory of the vehicle if it travels
 // at the max acceleration until the max velocity
 trajectory vehicle::max_velocity(double length) const {
-  trajectory t(false, arrival_time, current_position, current_position + length, init_velocity);
+  trajectory t(arrival_time, current_position, current_position + length, init_velocity);
 
   // already at the max speed, don't accelerate
   if (init_velocity >= MAX_V) {

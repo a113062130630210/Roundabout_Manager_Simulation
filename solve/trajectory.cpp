@@ -53,8 +53,8 @@ bool subtrajectory::conflict_with(const subtrajectory& traj) const {
 };
 
 
-trajectory::trajectory(bool e, double t, double ep, double lp, double v): 
-    is_entry(e), entry_time(t), leave_time(t), entry_position(ep), 
+trajectory::trajectory(double t, double ep, double lp, double v): 
+    entry_time(t), leave_time(t), entry_position(ep), 
     leave_position(lp), entry_velocity(v), leave_velocity(v), 
     sub_trajs(std::vector<subtrajectory>()) {}
 
