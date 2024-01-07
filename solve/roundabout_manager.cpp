@@ -12,8 +12,7 @@ void roundabout_manager::load_input() {
 
   _roundabout = roundabout(8, { 10, 10, 10, 10, 10, 10, 10, 10 });
 
-  // TODO: test wrap around
-  _vehicles.push_back(vehicle({ 0, 6, 7, 6.4, 0 }));
+  _vehicles.push_back(vehicle({ 0, 4, 3, 4.5, 0 }));
   _vehicles.push_back(vehicle({ 1, 0, 7, 0, 0 }));
 
   for (auto& v: _vehicles) {
@@ -112,6 +111,7 @@ trajectory roundabout_manager::schedule(int index) {
           t.push_sub_traj(-1, MIN_A);
 
           trajs.push_back(t);
+          _vehicles[index].insert_trajectory(sid, t);
           update_scheduling_table(sid, index, entry_time, scheduling);
 
           wayback_trajs.pop();
@@ -133,6 +133,7 @@ trajectory roundabout_manager::schedule(int index) {
     }
 
     trajs.push_back(traj);
+    _vehicles[index].insert_trajectory(sec_id, traj);
     update_scheduling_table(sec_id, index, cur_time, scheduling);
 
     sec_id   = sec_id == _roundabout.section_count() - 1 ? 0 : sec_id + 1;
@@ -146,7 +147,7 @@ trajectory roundabout_manager::schedule(int index) {
   for (auto& t: trajs) {
     // TODO: make sure section::scheduled is sorted by arrival time
     update_scheduling_table(sec_id, index, t.entry_time, scheduled);
-    _vehicles[index].trajs.emplace(sec_id, t);
+    _vehicles[index].insert_trajectory(sec_id, t);
 
     // pushes all vehicles in the same section upward
     // to avoid violating safety constraint

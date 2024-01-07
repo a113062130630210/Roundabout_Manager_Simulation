@@ -9,6 +9,7 @@ struct vehicle {
   vehicle(int, int, int, double, double);
 
   trajectory max_velocity(double) const;
+  void insert_trajectory(int, const trajectory&);
 
   int id;
   int index;

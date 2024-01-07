@@ -6,6 +6,16 @@
 vehicle::vehicle(int i, int in, int out, double at, double iv)
   : id(i), entry(in), exit(out), arrival_time(at), init_velocity(iv) {}
 
+void vehicle::insert_trajectory(int sec_id, const trajectory& traj) {
+  auto it = trajs.find(sec_id);
+  if (it == trajs.end()) {
+    trajs.insert({ sec_id, traj });
+  }
+  else {
+    it->second = traj;
+  }
+}
+
 // returns the trajectory of the vehicle if it travels
 // at the max acceleration until the max velocity
 trajectory vehicle::max_velocity(double length) const {
