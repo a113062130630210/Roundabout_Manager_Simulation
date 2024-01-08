@@ -1,19 +1,22 @@
+#include <algorithm>
 #include <cmath>
+#include <stdexcept>
 
 #include "constants.hpp"
 #include "vehicle.hpp"
 
-vehicle::vehicle(int i, int in, int out, double at, double iv)
-  : id(i), entry(in), exit(out), arrival_time(at), init_velocity(iv) {}
+vehicle::vehicle(int i, int in, int out, double at, double iv): 
+  id(i), entry(in), progress(in), exit(out), 
+  arrival_time(at), init_velocity(iv) {}
 
-void vehicle::insert_trajectory(int sec_id, const trajectory& traj) {
-  auto it = trajs.find(sec_id);
+trajectory& vehicle::get_traj(int sec_id) {
+  auto it = std::find_if(trajs.begin(), trajs.end(), [sec_id](auto& t) {
+    return t.first == sec_id;
+  });
   if (it == trajs.end()) {
-    trajs.insert({ sec_id, traj });
+    throw std::range_error("invalid section id");
   }
-  else {
-    it->second = traj;
-  }
+  return it->second;
 }
 
 // returns the trajectory of the vehicle if it travels

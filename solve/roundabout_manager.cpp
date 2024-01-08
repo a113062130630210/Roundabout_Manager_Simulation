@@ -13,7 +13,9 @@ void roundabout_manager::load_input() {
   _roundabout = roundabout(8, { 10, 10, 10, 10, 10, 10, 10, 10 });
 
   _vehicles.push_back(vehicle({ 0, 4, 3, 4.5, 0 }));
-  _vehicles.push_back(vehicle({ 1, 0, 7, 0, 0 }));
+  _vehicles.push_back(vehicle({ 2, 0, 7, 2.8, 0 }));
+  _vehicles.push_back(vehicle({ 3, 0, 7, 4.3, 0 }));
+  _vehicles.push_back(vehicle({ 4, 0, 7, 5.8, 0 }));
 
   for (auto& v: _vehicles) {
     v.current_position = _roundabout.position_of(v.entry);
@@ -68,40 +70,43 @@ void roundabout_manager::solve() {
 }
 
 trajectory roundabout_manager::schedule(int index) {
-  vehicle veh      = _vehicles[index];
-  int     sec_id   = veh.entry;
-  double  cur_time = veh.arrival_time;
-  std::vector<trajectory> trajs;
+  vehicle& veh      = _vehicles[index];
+  double   cur_time = veh.arrival_time;
+  auto&    trajs    = veh.trajs;
 
   do {
-    std::cout << "Scheduling vehicle ";
-    std::cout << veh.index << ", section " << sec_id << std::endl;
+    insert_scheduling_table(veh.progress, index, cur_time, unscheduled);
 
+    std::cout << "Scheduling vehicle ";
+    std::cout << veh.index << ", section " << veh.progress << std::endl;
     do {
-      int front = get_unscheduled_front(sec_id, cur_time);
+      int front = get_unscheduled_front(veh.progress, cur_time);
       if (front == -1) break;
       schedule(front);
     } while (true);
 
-    section& cur_sec = _roundabout.section_at(sec_id);
+    // TODO: simplify logic
+    if (veh.progress == veh.exit) break;
+
+    section& cur_sec = _roundabout.section_at(veh.progress);
     trajectory traj = veh.max_velocity(cur_sec.length);
 
-    int front = get_nearest_front(sec_id, cur_time);
+    int front = get_nearest_front(veh.progress, cur_time);
     if (front != -1) {
-      const trajectory& top_traj = _vehicles[front].trajs.at(sec_id);
+      const trajectory& top_traj = _vehicles[front].get_traj(veh.progress);
       if (!traj.place_on_top(top_traj)) {
         std::stack<trajectory> wayback_trajs;
 
         for (auto prev = trajs.rbegin(); prev != trajs.rend(); ++prev) {
-          if (prev->avoid_front(top_traj)) break;
+          if (prev->second.avoid_front(top_traj)) break;
           trajs.pop_back();
-          wayback_trajs.push(*prev);
+          wayback_trajs.push(prev->second);
         }
 
-        double entry_time = trajs.back().leave_time;
-        double entry_velocity = trajs.back().leave_velocity;
-        int sid = sec_id - wayback_trajs.size();
-        sid = sid >= 0 ? sid : sid + _roundabout.section_count();
+        double entry_time = trajs.back().second.leave_time;
+        double entry_velocity = trajs.back().second.leave_velocity;
+        int sec_id = veh.progress - wayback_trajs.size();
+        sec_id = sec_id >= 0 ? sec_id : sec_id + _roundabout.section_count();
 
         while (!wayback_trajs.empty()) {
           trajectory& t = wayback_trajs.top();
@@ -110,14 +115,13 @@ trajectory roundabout_manager::schedule(int index) {
           t.entry_velocity = entry_velocity;
           t.push_sub_traj(-1, MIN_A);
 
-          trajs.push_back(t);
-          _vehicles[index].insert_trajectory(sid, t);
-          update_scheduling_table(sid, index, entry_time, scheduling);
+          trajs.push_back({ sec_id, t });
+          update_scheduling_table(sec_id, index, entry_time, scheduling);
 
           wayback_trajs.pop();
           entry_time = t.leave_time;
           entry_velocity = t.leave_velocity;
-          sid = sid == _roundabout.section_count() - 1 ? 0 : sid + 1;
+          sec_id = sec_id == _roundabout.section_count() - 1 ? 0 : sec_id + 1;
         }
 
         veh.arrival_time = entry_time;
@@ -132,22 +136,19 @@ trajectory roundabout_manager::schedule(int index) {
       }
     }
 
-    trajs.push_back(traj);
-    _vehicles[index].insert_trajectory(sec_id, traj);
-    update_scheduling_table(sec_id, index, cur_time, scheduling);
+    trajs.push_back({ veh.progress, traj });
+    update_scheduling_table(veh.progress, index, cur_time, scheduling);
 
-    sec_id   = sec_id == _roundabout.section_count() - 1 ? 0 : sec_id + 1;
+    veh.progress = veh.progress == _roundabout.section_count() - 1 ? 0 : veh.progress + 1;
     veh.arrival_time = cur_time = traj.leave_time;
-    veh.current_position = _roundabout.position_of(sec_id);
+    veh.current_position = _roundabout.position_of(veh.progress);
     veh.init_velocity = traj.leave_velocity;
-    insert_scheduling_table(sec_id, index, cur_time, unscheduled);
-  } while (sec_id != veh.exit);
+  } while (veh.progress != veh.exit);
 
-  sec_id = veh.entry;
-  for (auto& t: trajs) {
+  int sec_id = veh.entry;
+  for (auto& [_, t]: trajs) {
     // TODO: make sure section::scheduled is sorted by arrival time
     update_scheduling_table(sec_id, index, t.entry_time, scheduled);
-    _vehicles[index].insert_trajectory(sec_id, t);
 
     // pushes all vehicles in the same section upward
     // to avoid violating safety constraint
@@ -163,15 +164,21 @@ trajectory roundabout_manager::schedule(int index) {
     sec_id = sec_id == _roundabout.section_count() - 1 ? 0 : sec_id + 1;
   }
 
-  return trajs[0];
+  return trajs[0].second;
 }
 
 void roundabout_manager::insert_scheduling_table
 (int sec_id, int veh_index, double entry_time, schedule_status status) {
   auto& sec = _scheduling_table[sec_id];
-  auto it = std::find_if(sec.begin(), sec.end(), [entry_time](schedule_info& i) {
+  auto it = std::find_if(sec.begin(), sec.end(), [veh_index](schedule_info& i) {
+    return i.index == veh_index;
+  });
+  if (it != sec.end()) return;
+
+  it = std::find_if(sec.begin(), sec.end(), [entry_time](schedule_info& i) {
     return i.entry_time >= entry_time;
   });
+
   sec.insert(it, { veh_index, entry_time, status });
 }
 
@@ -179,7 +186,7 @@ bool roundabout_manager::update_scheduling_table
 (int sec_id, int veh_index, double entry_time, schedule_status status) {
   auto& sec = _scheduling_table[sec_id];
   auto it = std::find_if(sec.begin(), sec.end(), [veh_index](schedule_info& i) {
-    return i.index >= veh_index;
+    return i.index == veh_index;
   });
   
   if (it == sec.end()) return false;

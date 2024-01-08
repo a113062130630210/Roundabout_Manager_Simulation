@@ -64,62 +64,62 @@ bool trajectory::place_on_top(const trajectory& t) {
     EXIT("[ERROR] place_on_top\ngot empty list");
   }
 
-  auto s_it = sub_trajs.begin();
-  auto t_it = t.sub_trajs.begin();
+  for (auto s_it = sub_trajs.begin(); s_it != sub_trajs.end(); s_it++) {
+    for (auto t_it = t.sub_trajs.begin(); t_it != t.sub_trajs.end(); t_it++) {
+      if (t_it->leave_position + 1e-10 < s_it->entry_position) continue;
 
-  // check if any two sub-trajectories conflict
-  while (s_it != sub_trajs.end() || t_it != t.sub_trajs.end()) {
-    // calculate the intersection points of two (quadratic) trajectories
-    if (s_it->conflict_with(*t_it)) {
       auto solutions = tangent_solver(
-        s_it->entry_time           , s_it->entry_position, s_it->entry_velocity, s_it->acc, 
-        t_it->entry_time + TIME_GAP, t_it->entry_position, t_it->entry_velocity, t_it->acc
+        s_it->entry_time, s_it->entry_position, 
+        s_it->entry_velocity, s_it->acc, 
+        t_it->entry_time + TIME_GAP, t_it->entry_position, 
+        t_it->entry_velocity, t_it->acc
       );
+      if (solutions) {
+        auto& [sol1, sol2] = solutions.value();
+        std::optional<std::pair<double, double>> result;
+        if (
+          s_it->entry_time <= sol1.first && 
+          sol1.first <= sol1.second && 
+          sol1.first <= s_it->leave_time
+        ) {
+          result = sol1;
+        }
+        else if (
+          s_it->entry_time <= sol2.first && 
+          sol2.first <= sol2.second && 
+          sol2.first <= s_it->leave_time
+        ) {
+          result = sol2;
+        }
 
-      if (!solutions) return false;
+        if (result) {
+          std::cout << *this << t;
+          auto [t_star, t_tang] = result.value();
+          std::cout << "GGG " << t_star << " " << t_tang << "\n";
+          double tmp_acc = s_it->acc;
 
-      auto& [sol1, sol2] = solutions.value();
-      std::optional<std::pair<double, double>> pair = std::nullopt;
-      if (s_it->entry_time <= sol1.first && sol1.first <= sol1.second) {
-        pair = sol1;
+          sub_trajs.erase(s_it, sub_trajs.end());
+          push_sub_traj(t_star, tmp_acc);
+
+          if (t_tang <= t_it->leave_time + TIME_GAP) {
+            push_sub_traj(t_tang, MIN_A);
+            push_sub_traj(t_it->leave_time + TIME_GAP, t_it->acc);
+          }
+          else {
+            push_sub_traj(-1, MIN_A);
+          }
+
+          for (auto it = t_it + 1; it != t.sub_trajs.end(); it++) {
+            push_sub_traj(it->leave_time + TIME_GAP, it->acc);
+          }
+          return true;
+        }
       }
-      else if (s_it->entry_time <= sol2.first && sol2.first <= sol2.second) {
-        pair = sol2;
-      }
 
-      if (!pair) return false;
-
-      sub_trajs.erase(s_it, sub_trajs.end());
-
-      auto [t_star, t_int] = pair.value();
-      double tmp_acc = s_it->acc;
-      push_sub_traj(t_star, tmp_acc);
-
-      if (t_int <= t_it->leave_time + TIME_GAP) {
-        push_sub_traj(t_int, MIN_A);
-        push_sub_traj(t_it->leave_time + TIME_GAP, t_it->acc);
-      }
-      else {
-        push_sub_traj(-1, MIN_A);
-      }
-
-
-      for (auto it = t_it + 1; it != t.sub_trajs.end(); it++) {
-        push_sub_traj(it->leave_time + TIME_GAP, it->acc);
-      }
-      return true;
-    }
-
-    double slp = s_it->leave_position;
-    double tlp = t_it->leave_position;
-    if (slp <= tlp + 1e-10) s_it++;
-    if (slp + 1e-10 >= tlp) t_it++;
-
-    if (s_it > sub_trajs.end() || t_it > t.sub_trajs.end()) {
-      EXIT("[ERROR] place_on_top exceed boundary");
+      if (s_it->conflict_with(*t_it)) return false;
     }
   }
-
+  
   return true;
 }
 
@@ -132,7 +132,8 @@ bool trajectory::avoid_front(const trajectory& target) {
   auto nxt_traj = veh.max_velocity(length);
   if (nxt_traj.place_on_top(target)) return true;
 
-  // the distance between the end of the section & the start posiion of current sub-trajectory
+  // the distance between the end of the section &
+  // the start posiion of current sub-trajectory
   double distance_left = 0;
 
   // start from the last sub-trajectory
@@ -219,12 +220,14 @@ trajectory& trajectory::push_sub_traj(double end_time, double acc) {
     ev = st.leave_velocity;
   }
 
+  std::cout << et << " " << end_time << std::endl;
   if (end_time < 0) {
     end_time = et + (sqrt(ev*ev + 2 * acc * (leave_position - ex)) - ev) / acc;
   }
 
   if (fabs(end_time - et) <= 1e-10) return *this;
   if (end_time < et) {
+    std::cout << end_time - et << std::endl;
     EXIT("[ERROR] trajectory::push_sub_traj\ninfeasible end time");
   }
 
