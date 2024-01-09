@@ -6,8 +6,17 @@ roundabout::roundabout() {
   roundabout(0, {});
 }
 
-roundabout::roundabout(const int c, const std::vector<double>& l): 
-    _section_count(c), _sections(std::vector<section>()) {
+roundabout::roundabout
+(const int c, const std::vector<double>& l): _section_count(c) {
+  double s = 0;
+  for (int i = 0; i < c; i++) {
+    _sections.push_back(section(i, l[i], s));
+    s += l[i];
+  }
+}
+
+roundabout::roundabout
+(const int c, std::vector<double>&& l): _section_count(c) {
   double s = 0;
   for (int i = 0; i < c; i++) {
     _sections.push_back(section(i, l[i], s));

@@ -7,27 +7,6 @@
 
 roundabout_manager::roundabout_manager(): _solved(false) {}
 
-void roundabout_manager::load_input() {
-  std::cout << "No input file is provided, using default settings." << std::endl;
-
-  _roundabout = roundabout(8, { 10, 10, 10, 10, 10, 10, 10, 10 });
-
-  _vehicles.push_back(vehicle({ 0, 4, 3, 4.5, 0 }));
-  _vehicles.push_back(vehicle({ 2, 0, 7, 2.8, 0 }));
-  _vehicles.push_back(vehicle({ 3, 0, 7, 4.3, 0 }));
-  _vehicles.push_back(vehicle({ 4, 0, 7, 5.8, 0 }));
-
-  for (auto& v: _vehicles) {
-    v.current_position = _roundabout.position_of(v.entry);
-  }
-}
-
-void roundabout_manager::load_input(const std::string&) {
-  // TODO: load input from file
-  std::cout << "Input file is temporarily ignored." << std::endl;
-  load_input();
-}
-
 void roundabout_manager::solve() {
   std::cout << "Solving..." << std::endl;
 
@@ -147,7 +126,6 @@ trajectory roundabout_manager::schedule(int index) {
 
   int sec_id = veh.entry;
   for (auto& [_, t]: trajs) {
-    // TODO: make sure section::scheduled is sorted by arrival time
     update_scheduling_table(sec_id, index, t.entry_time, scheduled);
 
     // pushes all vehicles in the same section upward
@@ -165,6 +143,65 @@ trajectory roundabout_manager::schedule(int index) {
   }
 
   return trajs[0].second;
+}
+
+void roundabout_manager::load_input(const std::string& filename) {
+  std::ifstream file(filename);
+  if (!file.is_open()) {
+    EXIT("Failed to open input file.");
+  }
+
+  int N, M;
+  std::vector<double> sections;
+
+  file >> N >> M;
+  for (int i = 0; i < M; i++) {
+    double t;
+    file >> t;
+    sections.push_back(t);
+  }
+
+  _roundabout = roundabout(M, std::move(sections));
+
+  for (int i = 0; i < N; i++) {
+    int id, entry, exit;
+    double arrival, vel;
+    file >> id >> entry >> exit >> arrival >> vel;
+
+    vehicle v = { id, entry, exit, arrival, vel };
+    v.current_position = _roundabout.position_of(entry);
+    _vehicles.push_back(std::move(v));
+  }
+}
+
+void roundabout_manager::print_result
+(const std::string& latex_name, const std::string& format_name) const {
+  if (!_solved) {
+    EXIT("The problem haven't been solved yet.");
+  }
+
+  std::ofstream latex_file(latex_name);
+  std::ofstream format_file(format_name);
+
+  if (!latex_file.is_open()) {
+    EXIT("Failed to open latex file.");
+  }
+  if (!format_file.is_open()) {
+    EXIT("Failed to open format file.");
+  }
+
+  for (auto& v: _vehicles) {
+    format_file << v.id << " " << v.trajs.back().second.leave_time;
+    for (auto& [_, traj]: v.trajs) {
+      latex_file << traj;
+
+      for (auto& st: traj.sub_trajs) {
+        format_file << " " << st.entry_time << " " << st.acc;
+      }
+    }
+    latex_file << std::endl;
+    format_file << std::endl;
+  }
 }
 
 void roundabout_manager::insert_scheduling_table
@@ -212,28 +249,4 @@ int roundabout_manager::get_unscheduled_front(int sec_id, double entry_time) {
     if (s == unscheduled) return idx;
   }
   return -1;
-}
-
-void roundabout_manager::print_result
-(const std::string& latex_name, const std::string& format_name) const {
-  if (!_solved) {
-    EXIT("The problem haven't been solved yet.");
-  }
-
-  std::ofstream latex_file, format_file;
-  latex_file.open(latex_name);
-  format_file.open(format_name);
-
-  format_file << _vehicles.size() << std::endl;
-  for (auto& v: _vehicles) {
-    for (auto& [_, traj]: v.trajs) {
-      latex_file << traj;
-
-      for (auto& st: traj.sub_trajs) {
-        format_file << st.entry_time << " " << st.acc << " ";
-      }
-    }
-    latex_file << std::endl;
-    format_file << std::endl;
-  }
 }

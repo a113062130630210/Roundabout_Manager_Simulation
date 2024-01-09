@@ -93,9 +93,7 @@ bool trajectory::place_on_top(const trajectory& t) {
         }
 
         if (result) {
-          std::cout << *this << t;
           auto [t_star, t_tang] = result.value();
-          std::cout << "GGG " << t_star << " " << t_tang << "\n";
           double tmp_acc = s_it->acc;
 
           sub_trajs.erase(s_it, sub_trajs.end());
@@ -220,14 +218,12 @@ trajectory& trajectory::push_sub_traj(double end_time, double acc) {
     ev = st.leave_velocity;
   }
 
-  std::cout << et << " " << end_time << std::endl;
   if (end_time < 0) {
     end_time = et + (sqrt(ev*ev + 2 * acc * (leave_position - ex)) - ev) / acc;
   }
 
   if (fabs(end_time - et) <= 1e-10) return *this;
   if (end_time < et) {
-    std::cout << end_time - et << std::endl;
     EXIT("[ERROR] trajectory::push_sub_traj\ninfeasible end time");
   }
 

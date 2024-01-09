@@ -14,6 +14,7 @@ class roundabout {
 public:
   roundabout();
   roundabout(const int, const std::vector<double>&);
+  roundabout(const int, std::vector<double>&&);
 
   int section_count() const;
   double length_of(int) const;
