@@ -3,11 +3,11 @@
 #include "vehicle.hpp"
 
 struct section {
-  section(int, double, double);
+  section(int, double, modular<double>);
 
   const int index;
   const double length;
-  const double position;
+  const modular<double> position;
 };
 
 class roundabout {
@@ -17,11 +17,13 @@ public:
   roundabout(const int, std::vector<double>&&);
 
   int section_count() const;
+  double total_length() const;
   double length_of(int) const;
-  double position_of(int) const;
+  modular<double> position_of(int) const;
   section& section_at(int);
 
 private:
   int _section_count;
+  double _total_length;
   std::vector<section> _sections;
 };

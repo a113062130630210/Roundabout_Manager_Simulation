@@ -106,7 +106,13 @@ trajectory roundabout_manager::schedule(int index) {
         veh.arrival_time = entry_time;
         veh.init_velocity = entry_velocity;
         traj = veh.max_velocity(cur_sec.length);
+        std::cout << top_traj << traj;
         if (!traj.place_on_top(top_traj)) {
+          // for (auto& v: _vehicles) {
+          //   for (auto& t: v.trajs) {
+          //     std::cout << t.second;
+          //   }
+          // }
           EXIT(
             "[ERROR] roundabout_manager::schedule\n"
             "this should not happen"
@@ -169,8 +175,7 @@ void roundabout_manager::load_input(const std::string& filename) {
     double arrival, vel;
     file >> id >> entry >> exit >> arrival >> vel;
 
-    vehicle v = { id, entry, exit, arrival, vel };
-    v.current_position = _roundabout.position_of(entry);
+    vehicle v(id, entry, exit, arrival, _roundabout.position_of(entry), vel);
     _vehicles.push_back(std::move(v));
   }
 }

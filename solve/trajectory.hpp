@@ -3,13 +3,16 @@
 #include <iostream>
 #include <vector>
 
+#include "types.hpp"
+
 struct subtrajectory {
-  subtrajectory(double, double, double, double, double, double, double);
+  subtrajectory
+  (double, double, modular<double>, modular<double>, double, double, double);
 
   double entry_time;
   double leave_time;
-  double entry_position;
-  double leave_position;
+  modular<double> entry_position;
+  modular<double> leave_position;
   double entry_velocity;
   double leave_velocity;
   double acc;
@@ -18,7 +21,7 @@ struct subtrajectory {
 };
 
 struct trajectory {
-  trajectory(double, double, double, double);
+  trajectory(double, modular<double>, modular<double>, double);
 
   bool place_on_top(const trajectory&);
   bool avoid_front(const trajectory&);
@@ -26,8 +29,8 @@ struct trajectory {
 
   double entry_time;
   double leave_time;
-  double entry_position;
-  double leave_position;
+  modular<double> entry_position;
+  modular<double> leave_position;
   double entry_velocity;
   double leave_velocity;
   std::vector<subtrajectory> sub_trajs;

@@ -6,7 +6,7 @@
 #include "trajectory.hpp"
 
 struct vehicle {
-  vehicle(int, int, int, double, double);
+  vehicle(int, int, int, double, modular<double>, double);
 
   trajectory& get_traj(int);
   trajectory max_velocity(double) const;
@@ -19,7 +19,7 @@ struct vehicle {
   int exit;
 
   double arrival_time;
-  double current_position;
+  modular<double> current_position;
   double init_velocity;
   std::vector<std::pair<int, trajectory>> trajs;
 };
