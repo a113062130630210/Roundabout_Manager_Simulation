@@ -26,11 +26,11 @@ void roundabout_manager::solve() {
     _scheduling_table.emplace_back();
   }
   for (auto& v: _vehicles) {
-    _scheduling_table[v.entry].emplace_back(v.index, v.arrival_time, unscheduled);
+    _scheduling_table[v.entry].emplace_back(v.index, v.arrival_time, false, true);
   }
   for (auto& sec: _scheduling_table) {
     double prev = -TIME_GAP;
-    for (auto& [idx, t, __]: sec) {
+    for (auto& [idx, t, _, __]: sec) {
       if (prev + TIME_GAP > t) {
         _vehicles[idx].arrival_time = t = prev + TIME_GAP;
       }
@@ -54,7 +54,7 @@ trajectory roundabout_manager::schedule(int index) {
   auto&    trajs    = veh.trajs;
 
   do {
-    insert_scheduling_table(veh.progress, index, cur_time, unscheduled);
+    insert_scheduling_table(veh.progress, index, cur_time, false);
 
     std::cout << "Scheduling vehicle ";
     std::cout << veh.index << ", section " << veh.progress << std::endl;
@@ -95,7 +95,7 @@ trajectory roundabout_manager::schedule(int index) {
           t.push_sub_traj(-1, MIN_A);
 
           trajs.push_back({ sec_id, t });
-          update_scheduling_table(sec_id, index, entry_time, scheduling);
+          update_scheduling_table(sec_id, index, entry_time, true);
 
           wayback_trajs.pop();
           entry_time = t.leave_time;
@@ -116,7 +116,7 @@ trajectory roundabout_manager::schedule(int index) {
     }
 
     trajs.push_back({ veh.progress, traj });
-    update_scheduling_table(veh.progress, index, cur_time, scheduling);
+    update_scheduling_table(veh.progress, index, cur_time, true);
 
     veh.progress = veh.progress == _roundabout.section_count() - 1 ? 0 : veh.progress + 1;
     veh.arrival_time = cur_time = traj.leave_time;
@@ -126,13 +126,14 @@ trajectory roundabout_manager::schedule(int index) {
 
   int sec_id = veh.entry;
   for (auto& [_, t]: trajs) {
-    update_scheduling_table(sec_id, index, t.entry_time, scheduled);
+    // TODO: probably removable
+    update_scheduling_table(sec_id, index, t.entry_time, true);
 
     // pushes all vehicles in the same section upward
     // to avoid violating safety constraint
     double prev_entry = t.entry_time;
-    for (auto& [idx, entry_time, status]: _scheduling_table[sec_id]) {
-      if (status != unscheduled) continue;
+    for (auto& [idx, entry_time, scheduled, is_entry]: _scheduling_table[sec_id]) {
+      if (scheduled || !is_entry) continue;
       double safe_time = prev_entry + TIME_GAP;
       auto& v = _vehicles[idx];
       if (v.arrival_time > safe_time) break;
@@ -205,8 +206,10 @@ void roundabout_manager::print_result
 }
 
 void roundabout_manager::insert_scheduling_table
-(int sec_id, int veh_index, double entry_time, schedule_status status) {
+(int sec_id, int veh_index, double entry_time, bool scheduled) {
   auto& sec = _scheduling_table[sec_id];
+
+  // insertion fail if the entry already exists
   auto it = std::find_if(sec.begin(), sec.end(), [veh_index](schedule_info& i) {
     return i.index == veh_index;
   });
@@ -216,11 +219,11 @@ void roundabout_manager::insert_scheduling_table
     return i.entry_time >= entry_time;
   });
 
-  sec.insert(it, { veh_index, entry_time, status });
+  sec.insert(it, { veh_index, entry_time, scheduled, false });
 }
 
 bool roundabout_manager::update_scheduling_table
-(int sec_id, int veh_index, double entry_time, schedule_status status) {
+(int sec_id, int veh_index, double entry_time, bool scheduled) {
   auto& sec = _scheduling_table[sec_id];
   auto it = std::find_if(sec.begin(), sec.end(), [veh_index](schedule_info& i) {
     return i.index == veh_index;
@@ -228,15 +231,15 @@ bool roundabout_manager::update_scheduling_table
   
   if (it == sec.end()) return false;
   it->entry_time = entry_time;
-  it->status = status;
+  it->scheduled = scheduled;
   return true;
 }
 
 int roundabout_manager::get_nearest_front(int sec_id, double entry_time) {
   const int N = _scheduling_table[sec_id].size();
   for (int i = N - 1; i >= 0; i--) {
-    auto& [idx, t, s] = _scheduling_table[sec_id][i];
-    if (s == unscheduled) continue;
+    auto& [idx, t, s, _] = _scheduling_table[sec_id][i];
+    if (!s) continue;
     if (t < entry_time) return idx;
   }
   return -1;
@@ -244,9 +247,9 @@ int roundabout_manager::get_nearest_front(int sec_id, double entry_time) {
 
 int roundabout_manager::get_unscheduled_front(int sec_id, double entry_time) {
   if (_scheduling_table[sec_id].size() == 0) return -1;
-  for (auto& [idx, t, s]: _scheduling_table[sec_id]) {
+  for (auto& [idx, t, s, _]: _scheduling_table[sec_id]) {
     if (t >= entry_time) return -1;
-    if (s == unscheduled) return idx;
+    if (!s) return idx;
   }
   return -1;
 }

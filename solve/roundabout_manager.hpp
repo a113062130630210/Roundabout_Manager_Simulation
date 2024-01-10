@@ -5,16 +5,13 @@
 
 class roundabout_manager {
 public:
-  enum schedule_status {
-    unscheduled, scheduling, scheduled
-  };
-
   struct schedule_info {
-    schedule_info(int i, double t, schedule_status s): 
-      index(i), entry_time(t), status(s) {}
+    schedule_info(int i, double t, bool s, bool ie): 
+      index(i), entry_time(t), scheduled(s), is_entry(ie) {}
     int index;
     double entry_time;
-    schedule_status status;
+    bool scheduled;
+    bool is_entry;
   };
 
   roundabout_manager();
@@ -32,6 +29,6 @@ private:
   trajectory schedule(int);
   int get_nearest_front(int, double);
   int get_unscheduled_front(int, double);
-  void insert_scheduling_table(int, int, double, schedule_status);
-  bool update_scheduling_table(int, int, double, schedule_status);
+  void insert_scheduling_table(int, int, double, bool);
+  bool update_scheduling_table(int, int, double, bool);
 };

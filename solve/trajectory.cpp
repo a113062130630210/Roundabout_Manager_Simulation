@@ -122,11 +122,11 @@ bool trajectory::place_on_top(const trajectory& t) {
 }
 
 bool trajectory::avoid_front(const trajectory& target) {
-  // temparary instances to help the calculation
-  const double length = target.leave_position - leave_position;
+  // temparary instance to help the calculation
   vehicle veh(-1, -1, -1, leave_time, leave_velocity);
   veh.current_position = leave_position;
 
+  const double length = target.leave_position - leave_position;
   auto nxt_traj = veh.max_velocity(length);
   if (nxt_traj.place_on_top(target)) return true;
 
