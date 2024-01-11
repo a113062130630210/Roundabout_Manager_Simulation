@@ -5,7 +5,7 @@
 #include "constants.hpp"
 #include "vehicle.hpp"
 
-vehicle::vehicle(int i, int in, int out, double at, modular<double> cp, double iv): 
+vehicle::vehicle(int i, int in, int out, double at, double cp, double iv): 
   id(i), entry(in), progress(in), exit(out), 
   arrival_time(at), current_position(cp), init_velocity(iv) {}
 

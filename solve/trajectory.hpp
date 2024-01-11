@@ -7,12 +7,12 @@
 
 struct subtrajectory {
   subtrajectory
-  (double, double, modular<double>, modular<double>, double, double, double);
+  (double, double, double, double, double, double, double);
 
   double entry_time;
   double leave_time;
-  modular<double> entry_position;
-  modular<double> leave_position;
+  double entry_position;
+  double leave_position;
   double entry_velocity;
   double leave_velocity;
   double acc;
@@ -21,19 +21,23 @@ struct subtrajectory {
 };
 
 struct trajectory {
-  trajectory(double, modular<double>, modular<double>, double);
+  using sub_trajs_t = std::vector<subtrajectory>;
+
+  trajectory(double, double, double, double);
 
   bool place_on_top(const trajectory&);
-  bool avoid_front(const trajectory&);
+  bool avoid_front(trajectory, double);
   trajectory& push_sub_traj(double, double);
+  void clear_trajs();
+  void wipe_trajs(const sub_trajs_t::iterator&);
 
   double entry_time;
   double leave_time;
-  modular<double> entry_position;
-  modular<double> leave_position;
+  double entry_position;
+  double leave_position;
   double entry_velocity;
   double leave_velocity;
-  std::vector<subtrajectory> sub_trajs;
+  sub_trajs_t sub_trajs;
 };
 
 std::ostream& operator<<(std::ostream& os, const subtrajectory& st);

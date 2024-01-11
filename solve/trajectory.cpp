@@ -6,14 +6,13 @@
 #include "util.hpp"
 #include "vehicle.hpp"
 
-subtrajectory::subtrajectory(
-  double et, double lt, modular<double> ep, modular<double> lp, 
-  double ev, double lv, double a):
-    entry_time(et), leave_time(lt), entry_position(ep), leave_position(lp), 
-    entry_velocity(ev), leave_velocity(lv), acc(a) {}
+subtrajectory::subtrajectory
+(double et, double lt, double ep, double lp, double ev, double lv, double a):
+  entry_time(et), leave_time(lt), entry_position(ep), leave_position(lp), 
+  entry_velocity(ev), leave_velocity(lv), acc(a) {}
 
 bool subtrajectory::conflict_with(const subtrajectory& traj) const {
-  // check if `traj` is above `*this`
+  // check if `traj` is above `*this` (only entry time is checked)
   {
     bool this_is_front = entry_position > traj.entry_position;
     const subtrajectory& front = this_is_front ? *this : traj;
@@ -23,7 +22,7 @@ bool subtrajectory::conflict_with(const subtrajectory& traj) const {
       EXIT("[ERROR] trajectory::is_conflict\nthis should not happen");
     }
 
-    double d = *(front.entry_position - back.entry_position);
+    double d = front.entry_position - back.entry_position;
     double a = back.acc;
     double v = back.entry_velocity;
     double t = back.entry_time;
@@ -39,14 +38,14 @@ bool subtrajectory::conflict_with(const subtrajectory& traj) const {
 
   // check if `*this` and `traj` intersects
   auto s = quadratic_solver(
-         entry_time           ,      *entry_position,      entry_velocity,      acc, 
-    traj.entry_time + TIME_GAP, *traj.entry_position, traj.entry_velocity, traj.acc
+         entry_time           ,      entry_position,      entry_velocity,      acc, 
+    traj.entry_time + TIME_GAP, traj.entry_position, traj.entry_velocity, traj.acc
   );
   if (!s) return false;
 
   // check if any of the intersection points is in the range of trajectories
   double l_bound = std::max(entry_time, traj.entry_time);
-  double r_bound = std::max(leave_time, traj.leave_time);
+  double r_bound = std::min(leave_time, traj.leave_time);
   return (
     (l_bound < s->first && s->first < r_bound) || 
     (l_bound < s->second && s->second < r_bound)
@@ -54,11 +53,10 @@ bool subtrajectory::conflict_with(const subtrajectory& traj) const {
 };
 
 
-trajectory::trajectory
-(double t, modular<double> ep, modular<double> lp, double v): 
+trajectory::trajectory(double t, double ep, double lp, double v): 
   entry_time(t), leave_time(t), entry_position(ep), 
-  leave_position(lp), entry_velocity(v), leave_velocity(v), 
-  sub_trajs() {}
+  leave_position(lp), entry_velocity(v), 
+  leave_velocity(v), sub_trajs() {}
 
 // the trajectory should directly come from vehicle::max_velocity
 bool trajectory::place_on_top(const trajectory& t) {
@@ -71,9 +69,9 @@ bool trajectory::place_on_top(const trajectory& t) {
       if (t_it->leave_position + 1e-10 < s_it->entry_position) continue;
 
       auto solutions = tangent_solver(
-        s_it->entry_time, *s_it->entry_position, 
+        s_it->entry_time, s_it->entry_position, 
         s_it->entry_velocity, s_it->acc, 
-        t_it->entry_time + TIME_GAP, *t_it->entry_position, 
+        t_it->entry_time + TIME_GAP, t_it->entry_position, 
         t_it->entry_velocity, t_it->acc
       );
       if (solutions) {
@@ -82,14 +80,16 @@ bool trajectory::place_on_top(const trajectory& t) {
         if (
           s_it->entry_time <= sol1.first && 
           sol1.first <= sol1.second && 
-          sol1.first <= s_it->leave_time
+          sol1.first <= s_it->leave_time &&
+          sol1.second <= t_it->leave_time + TIME_GAP
         ) {
           result = sol1;
         }
         else if (
           s_it->entry_time <= sol2.first && 
           sol2.first <= sol2.second && 
-          sol2.first <= s_it->leave_time
+          sol2.first <= s_it->leave_time &&
+          sol2.second <= t_it->leave_time + TIME_GAP
         ) {
           result = sol2;
         }
@@ -98,7 +98,7 @@ bool trajectory::place_on_top(const trajectory& t) {
           auto [t_star, t_tang] = result.value();
           double tmp_acc = s_it->acc;
 
-          sub_trajs.erase(s_it, sub_trajs.end());
+          wipe_trajs(s_it);
           push_sub_traj(t_star, tmp_acc);
 
           if (t_tang <= t_it->leave_time + TIME_GAP) {
@@ -123,11 +123,20 @@ bool trajectory::place_on_top(const trajectory& t) {
   return true;
 }
 
-bool trajectory::avoid_front(const trajectory& target) {
+bool trajectory::avoid_front(trajectory target, double ring_len) {
   // temparary instance to help the calculation
   vehicle veh(-1, -1, -1, leave_time, leave_position, leave_velocity);
+  double length = target.leave_position - leave_position;
+  if (length < 0) {
+    length += ring_len;
+    target.entry_position += ring_len;
+    target.leave_position += ring_len;
+    for (auto& st: target.sub_trajs) {
+      st.entry_position += ring_len;
+      st.leave_position += ring_len;
+    }
+  }
 
-  double length = *(target.leave_position - leave_position);
   auto nxt_traj = veh.max_velocity(length);
   if (nxt_traj.place_on_top(target)) return true;
 
@@ -136,54 +145,51 @@ bool trajectory::avoid_front(const trajectory& target) {
   double distance_left = 0;
 
   // start from the last sub-trajectory
-  auto it = sub_trajs.end() - 1;
-  while (it >= sub_trajs.begin()) {
-    distance_left += *(it->leave_position - it->entry_position);
+  for (auto it = sub_trajs.rbegin(); it != sub_trajs.rend(); ++it) {
+    distance_left += it->leave_position - it->entry_position;
 
     // binary search the best timing to decelerate
     bool too_slow = false;
     auto best_sol = std::make_pair(-1., -1.);
+    double b = it->entry_time;
+    double e = it->leave_time;
+    double m = b;
 
-    {
-      double b = it->entry_time;
-      double e = it->leave_time;
-      double m = b;
-      for (int i = 0; i < 25 && b != e; i++) {
-        double t = m - it->entry_time;                                      // total time to travel before deceleration
-        double v = it->entry_velocity + it->acc*t;                          // initial velocity of the deceleration process
-        double d = distance_left - (it->entry_velocity*t + it->acc*t*t/2);  // distance left for the deceleration process
+    for (int i = 0; i < 25 && b != e; i++) {
+      double t = m - it->entry_time;                                      // total time to travel before deceleration
+      double v = it->entry_velocity + it->acc*t;                          // initial velocity of the deceleration process
+      double d = distance_left - (it->entry_velocity*t + it->acc*t*t/2);  // distance left for the deceleration process
 
-        // check if initial velocity `v` is too slow to travel the distance `d`
-        double delta = v*v + 2*MIN_A*d;
-        if (delta < 0) {
-          too_slow = true;
+      // check if initial velocity `v` is too slow to travel the distance `d`
+      double delta = v*v + 2*MIN_A*d;
+      if (delta < 0) {
+        too_slow = true;
+        b = m;
+      }
+
+      // `v` is fast enough to make it
+      else {
+        t  = (-v + sqrt(delta)) / MIN_A;  // the travel time of current sub-trajectory
+        v += MIN_A * t;                   // the leave velocity of current sub-trajectory
+
+        veh.arrival_time  = m + t;
+        veh.init_velocity = v;
+        nxt_traj = veh.max_velocity(length);
+
+        // the next trajactory can be legally put on top of the target, 
+        // set the current state as best solution, decelerate later
+        if (nxt_traj.place_on_top(target)) {
+          best_sol = std::make_pair(m, m + t);
           b = m;
         }
 
-        // `v` is fast enough to make it
+        // otherwise, decelerate earlier
         else {
-          t  = (-v + sqrt(delta)) / MIN_A;  // the travel time of current sub-trajectory
-          v += MIN_A * t;                   // the leave velocity of current sub-trajectory
-
-          veh.arrival_time  = m + t;
-          veh.init_velocity = v;
-          nxt_traj = veh.max_velocity(length);
-
-          // the next trajactory can be legally put on top of the target, 
-          // set the current state as best solution, decelerate later
-          if (nxt_traj.place_on_top(target)) {
-            best_sol = std::make_pair(m, m + t);
-            b = m;
-          }
-
-          // otherwise, decelerate earlier
-          else {
-            e = m;
-          }
+          e = m;
         }
-
-        m = (b + e) / 2;
       }
+
+      m = (b + e) / 2;
     }
 
     // best solution is found
@@ -199,17 +205,16 @@ bool trajectory::avoid_front(const trajectory& target) {
     if (too_slow) return false;
 
     sub_trajs.pop_back();    
-    it = sub_trajs.end() - 1;
   }
 
   return false;
 }
 
 trajectory& trajectory::push_sub_traj(double end_time, double acc) {
-  double et, ev;
-  modular<double> ex(entry_position);
+  double et, ex, ev;
   if (sub_trajs.empty()) {
     et = entry_time;
+    ex = entry_position;
     ev = entry_velocity;
   }
   else {
@@ -220,7 +225,7 @@ trajectory& trajectory::push_sub_traj(double end_time, double acc) {
   }
 
   if (end_time < 0) {
-    end_time = et + (sqrt(ev*ev + 2 * acc * (*(leave_position - ex))) - ev) / acc;
+    end_time = et + (sqrt(ev*ev + 2 * acc * (leave_position - ex)) - ev) / acc;
   }
 
   if (fabs(end_time - et) <= 1e-10) return *this;
@@ -229,7 +234,7 @@ trajectory& trajectory::push_sub_traj(double end_time, double acc) {
   }
 
   double t = end_time - et;
-  modular<double> lx = ex + ev * t + acc * t * t / 2;
+  double lx = ex + ev * t + acc * t * t / 2;
   double lv = ev + acc * t;
 
   if (lx > leave_position + 1e-10) {
@@ -241,4 +246,16 @@ trajectory& trajectory::push_sub_traj(double end_time, double acc) {
   sub_trajs.emplace_back(et, end_time, ex, lx, ev, lv, acc);
 
   return *this;
+}
+
+void trajectory::clear_trajs() {
+  leave_time = entry_time;
+  sub_trajs.clear();
+}
+
+void trajectory::wipe_trajs(const sub_trajs_t::iterator& start) {
+  leave_time = start->entry_time;
+  for (auto it = sub_trajs.end() - 1; it >= start; it--) {
+    sub_trajs.pop_back();
+  }
 }

@@ -3,11 +3,11 @@
 #include "vehicle.hpp"
 
 struct section {
-  section(int, double, modular<double>);
+  section(int, double, double);
 
   const int index;
   const double length;
-  const modular<double> position;
+  const double position;
 };
 
 class roundabout {
@@ -19,7 +19,7 @@ public:
   int section_count() const;
   double total_length() const;
   double length_of(int) const;
-  modular<double> position_of(int) const;
+  double position_of(int) const;
   section& section_at(int);
 
 private:

@@ -76,8 +76,9 @@ trajectory roundabout_manager::schedule(int index) {
       if (!traj.place_on_top(top_traj)) {
         std::stack<trajectory> wayback_trajs;
 
+        double total_length = _roundabout.total_length();
         for (auto prev = trajs.rbegin(); prev != trajs.rend(); ++prev) {
-          if (prev->second.avoid_front(top_traj)) break;
+          if (prev->second.avoid_front(top_traj, total_length)) break;
           trajs.pop_back();
           wayback_trajs.push(prev->second);
         }
@@ -89,7 +90,7 @@ trajectory roundabout_manager::schedule(int index) {
 
         while (!wayback_trajs.empty()) {
           trajectory& t = wayback_trajs.top();
-          t.sub_trajs.clear();
+          t.clear_trajs();
           t.entry_time = entry_time;
           t.entry_velocity = entry_velocity;
           t.push_sub_traj(-1, MIN_A);
@@ -106,7 +107,6 @@ trajectory roundabout_manager::schedule(int index) {
         veh.arrival_time = entry_time;
         veh.init_velocity = entry_velocity;
         traj = veh.max_velocity(cur_sec.length);
-        std::cout << top_traj << traj;
         if (!traj.place_on_top(top_traj)) {
           // for (auto& v: _vehicles) {
           //   for (auto& t: v.trajs) {
