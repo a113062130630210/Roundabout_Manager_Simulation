@@ -26,7 +26,7 @@ void roundabout_manager::solve() {
     _scheduling_table.emplace_back();
   }
   for (auto& v: _vehicles) {
-    _scheduling_table[v.entry].emplace_back(v.index, v.arrival_time, false, true);
+    _scheduling_table[*v.entry].emplace_back(v.index, v.arrival_time, false, true);
   }
   for (auto& sec: _scheduling_table) {
     double prev = -TIME_GAP;
@@ -54,12 +54,12 @@ trajectory roundabout_manager::schedule(int index) {
   auto&    trajs    = veh.trajs;
 
   do {
-    insert_scheduling_table(veh.progress, index, cur_time, false);
+    insert_scheduling_table(*veh.progress, index, cur_time, false);
 
     std::cout << "Scheduling vehicle ";
     std::cout << veh.index << ", section " << veh.progress << std::endl;
     do {
-      int front = get_unscheduled_front(veh.progress, cur_time);
+      int front = get_unscheduled_front(*veh.progress, cur_time);
       if (front == -1) break;
       schedule(front);
     } while (true);
@@ -67,46 +67,53 @@ trajectory roundabout_manager::schedule(int index) {
     // TODO: simplify logic
     if (veh.progress == veh.exit) break;
 
-    section& cur_sec = _roundabout.section_at(veh.progress);
+    section& cur_sec = _roundabout.section_at(*veh.progress);
     trajectory traj = veh.max_velocity(cur_sec.length);
 
-    int front = get_nearest_front(veh.progress, cur_time);
+    int front = get_nearest_front(*veh.progress, cur_time);
     if (front != -1) {
-      const trajectory& top_traj = _vehicles[front].get_traj(veh.progress);
+      const trajectory& top_traj = _vehicles[front].get_traj(*veh.progress);
       if (!traj.place_on_top(top_traj)) {
-        std::stack<trajectory> wayback_trajs;
+        std::stack<modular<int>> wayback_trajs;
 
         double total_length = _roundabout.total_length();
+        auto sec_id = veh.progress - 1;
         for (auto prev = trajs.rbegin(); prev != trajs.rend(); ++prev) {
           if (prev->second.avoid_front(top_traj, total_length)) break;
+          wayback_trajs.push(sec_id);
           trajs.pop_back();
-          wayback_trajs.push(prev->second);
+          sec_id -= 1;
         }
 
         double entry_time = trajs.back().second.leave_time;
         double entry_velocity = trajs.back().second.leave_velocity;
-        int sec_id = veh.progress - wayback_trajs.size();
-        sec_id = sec_id >= 0 ? sec_id : sec_id + _roundabout.section_count();
+        sec_id = veh.progress - (int)wayback_trajs.size();
+        
 
         while (!wayback_trajs.empty()) {
-          trajectory& t = wayback_trajs.top();
-          t.clear_trajs();
-          t.entry_time = entry_time;
-          t.entry_velocity = entry_velocity;
+          auto entry = wayback_trajs.top();
+          if (veh.index == 2 && *veh.progress == 2) {
+          }
+
+          trajectory t(
+            entry_time, _roundabout.position_of(*entry), 
+            _roundabout.position_of(*(entry + 1)), entry_velocity
+          );
           t.push_sub_traj(-1, MIN_A);
 
-          trajs.push_back({ sec_id, t });
-          update_scheduling_table(sec_id, index, entry_time, true);
+          trajs.push_back({ *sec_id, t });
+          update_scheduling_table(*sec_id, index, entry_time, true);
 
           wayback_trajs.pop();
           entry_time = t.leave_time;
           entry_velocity = t.leave_velocity;
-          sec_id = sec_id == _roundabout.section_count() - 1 ? 0 : sec_id + 1;
+          sec_id += 1;
         }
 
         veh.arrival_time = entry_time;
         veh.init_velocity = entry_velocity;
         traj = veh.max_velocity(cur_sec.length);
+
         if (!traj.place_on_top(top_traj)) {
           // for (auto& v: _vehicles) {
           //   for (auto& t: v.trajs) {
@@ -121,24 +128,24 @@ trajectory roundabout_manager::schedule(int index) {
       }
     }
 
-    trajs.push_back({ veh.progress, traj });
-    update_scheduling_table(veh.progress, index, cur_time, true);
+    trajs.push_back({ *veh.progress, traj });
+    update_scheduling_table(*veh.progress, index, cur_time, true);
 
-    veh.progress = veh.progress == _roundabout.section_count() - 1 ? 0 : veh.progress + 1;
+    veh.progress += 1;
     veh.arrival_time = cur_time = traj.leave_time;
-    veh.current_position = _roundabout.position_of(veh.progress);
+    veh.current_position = _roundabout.position_of(*veh.progress);
     veh.init_velocity = traj.leave_velocity;
   } while (veh.progress != veh.exit);
 
-  int sec_id = veh.entry;
+  auto sec_id = veh.entry;
   for (auto& [_, t]: trajs) {
     // TODO: probably removable
-    update_scheduling_table(sec_id, index, t.entry_time, true);
+    update_scheduling_table(*sec_id, index, t.entry_time, true);
 
     // pushes all vehicles in the same section upward
     // to avoid violating safety constraint
     double prev_entry = t.entry_time;
-    for (auto& [idx, entry_time, scheduled, is_entry]: _scheduling_table[sec_id]) {
+    for (auto& [idx, entry_time, scheduled, is_entry]: _scheduling_table[*sec_id]) {
       if (scheduled || !is_entry) continue;
       double safe_time = prev_entry + TIME_GAP;
       auto& v = _vehicles[idx];
@@ -146,7 +153,7 @@ trajectory roundabout_manager::schedule(int index) {
       prev_entry = v.arrival_time = entry_time = safe_time;
     }
 
-    sec_id = sec_id == _roundabout.section_count() - 1 ? 0 : sec_id + 1;
+    sec_id += 1;
   }
 
   return trajs[0].second;
@@ -175,7 +182,7 @@ void roundabout_manager::load_input(const std::string& filename) {
     double arrival, vel;
     file >> id >> entry >> exit >> arrival >> vel;
 
-    vehicle v(id, entry, exit, arrival, _roundabout.position_of(entry), vel);
+    vehicle v(id, { M, entry }, { M, exit }, arrival, _roundabout.position_of(entry), vel);
     _vehicles.push_back(std::move(v));
   }
 }

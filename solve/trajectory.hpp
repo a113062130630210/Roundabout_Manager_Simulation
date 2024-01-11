@@ -3,8 +3,6 @@
 #include <iostream>
 #include <vector>
 
-#include "types.hpp"
-
 struct subtrajectory {
   subtrajectory
   (double, double, double, double, double, double, double);

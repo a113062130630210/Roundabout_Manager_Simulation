@@ -5,7 +5,8 @@
 #include "constants.hpp"
 #include "vehicle.hpp"
 
-vehicle::vehicle(int i, int in, int out, double at, double cp, double iv): 
+vehicle::vehicle
+(int i, modular<int> in, modular<int> out, double at, double cp, double iv): 
   id(i), entry(in), progress(in), exit(out), 
   arrival_time(at), current_position(cp), init_velocity(iv) {}
 
@@ -37,7 +38,10 @@ trajectory vehicle::max_velocity(double length) const {
 
   // if the length is not enough to reach the max velocity
   if (dist_at_max_a >= length) {
-    double time_travel = (sqrt(init_velocity * init_velocity + 2 * MAX_A * length) - init_velocity) / MAX_A;
+    double delta = init_velocity * init_velocity + 2 * MAX_A * length;
+    if (fabs(delta) <= 1e-10) delta = 0;
+
+    double time_travel = (sqrt(delta) - init_velocity) / MAX_A;
     t.push_sub_traj(arrival_time + time_travel, MAX_A);
   }
 

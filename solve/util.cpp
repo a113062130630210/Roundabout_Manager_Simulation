@@ -25,7 +25,7 @@ std::optional<std::pair<double, double>> quadratic_solver(
   }
 
   double delta = B*B - 4*A*C;
-  if (delta < 0) return std::nullopt;
+  if (delta <= 1e-10) return std::nullopt;
 
   double X = -B / (2*A);
   double Y = sqrt(delta) / (2*A);
@@ -65,7 +65,7 @@ tangent_solver(
   }
   else {
     double delta = B*B - 4*A*C;
-    if (delta < 0) return std::nullopt;
+    if (delta <= 1e-10) return std::nullopt;
 
     double X = -B / (2*A);
     double Y = sqrt(delta) / (2*A);

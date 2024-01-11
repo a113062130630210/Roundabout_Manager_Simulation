@@ -71,19 +71,19 @@ private:
 
 template <typename T>
 modular<T>::modular(T n, T i): _n(n), _i(i) {
-  if (n < 0) throw std::range_error("negative divisor");
+  if (n <= 0) throw std::range_error("negative divisor");
 }
 
 template <typename T>
 modular<T>::modular(const modular<T>& m) {
-  if (m._n < 0) throw std::range_error("negative divisor");
+  if (m._n <= 0) throw std::range_error("negative divisor");
   _n = m._n;
   _i = m._i;
 }
 
 template <typename T>
 modular<T>::modular(modular<T>&& m) {
-  if (m._n < 0) throw std::range_error("negative divisor");
+  if (m._n <= 0) throw std::range_error("negative divisor");
   _n = m._n;
   _i = m._i;
 }
@@ -193,7 +193,7 @@ inline bool operator>=(const modular<T>& lhs, const modular<T>& rhs) {
 
 template<typename T>
 inline bool operator==(const modular<T>& lhs, const modular<T>& rhs) {
-  if (lhs._n != rhs._n) divisor_error(lhs._n, rhs._n);
+  if (lhs._n != rhs._n) divisor_error(lhs._n, rhs._n, "operator==");
   return lhs._i == rhs._i;
 }
 

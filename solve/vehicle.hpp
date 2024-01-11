@@ -4,9 +4,10 @@
 #include <vector>
 
 #include "trajectory.hpp"
+#include "types.hpp"
 
 struct vehicle {
-  vehicle(int, int, int, double, double, double);
+  vehicle(int, modular<int>, modular<int>, double, double, double);
 
   trajectory& get_traj(int);
   trajectory max_velocity(double) const;
@@ -14,9 +15,9 @@ struct vehicle {
   int id;
   int index;
 
-  int entry;
-  int progress;
-  int exit;
+  modular<int> entry;
+  modular<int> progress;
+  modular<int> exit;
 
   double arrival_time;
   double current_position;

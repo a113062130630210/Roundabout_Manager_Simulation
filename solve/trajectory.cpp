@@ -27,8 +27,9 @@ bool subtrajectory::conflict_with(const subtrajectory& traj) const {
     double v = back.entry_velocity;
     double t = back.entry_time;
 
-    double time_at_front_position = a == 0 ?
-      d/v + t : (sqrt(v*v + 2*a*d) - v) / a + t;
+    double delta = v*v + 2*a*d;
+    if (fabs(delta) <= 1e-10) delta = 0;
+    double time_at_front_position = (a == 0 ? d/v : (sqrt(delta) - v) / a) + t;
 
     if (
       (this_is_front && time_at_front_position + TIME_GAP > entry_time) ||
@@ -125,7 +126,7 @@ bool trajectory::place_on_top(const trajectory& t) {
 
 bool trajectory::avoid_front(trajectory target, double ring_len) {
   // temparary instance to help the calculation
-  vehicle veh(-1, -1, -1, leave_time, leave_position, leave_velocity);
+  vehicle veh(-1, {1, -1}, {1, -1}, leave_time, leave_position, leave_velocity);
   double length = target.leave_position - leave_position;
   if (length < 0) {
     length += ring_len;
@@ -162,7 +163,7 @@ bool trajectory::avoid_front(trajectory target, double ring_len) {
 
       // check if initial velocity `v` is too slow to travel the distance `d`
       double delta = v*v + 2*MIN_A*d;
-      if (delta < 0) {
+      if (delta <= 1e-10) {
         too_slow = true;
         b = m;
       }
@@ -225,7 +226,9 @@ trajectory& trajectory::push_sub_traj(double end_time, double acc) {
   }
 
   if (end_time < 0) {
-    end_time = et + (sqrt(ev*ev + 2 * acc * (leave_position - ex)) - ev) / acc;
+    double delta = ev*ev + 2 * acc * (leave_position - ex);
+    if (fabs(delta) <= 1e-10) delta = 0;
+    end_time = et + (sqrt(delta) - ev) / acc;
   }
 
   if (fabs(end_time - et) <= 1e-10) return *this;
