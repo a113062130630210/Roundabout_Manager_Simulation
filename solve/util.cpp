@@ -37,27 +37,30 @@ tangent_solver(
   double t1, double x1, double v1, double a1, 
   double t2, double x2, double v2, double a2
 ) {
-  double term = v1 - v2 - a1*t1 + a2*t2;
+  double term1 = v1 - v2 - a1*t1 + a2*t2;
+  double term2 = x1 - x2 - v1*t1 - v2*t2 + (a1*t1*t1 - a2*t2*t2) / 2;
 
   if (MIN_A == a2) {
     if (a1 == a2) {
-      if (term > 0) return std::nullopt;
-      return std::make_pair(std::make_pair(t1, t1), std::make_pair(t1, t1));
+      if (fabs(term1) <= 1e-10 && term2 <= 1e-10) {
+        return std::make_pair(std::make_pair(t1, t1), std::make_pair(t1, t1));
+      }
+      return std::nullopt;
     }
 
-    double T = -term / (a1 - a2);
+    double T = term1 / (a2 - a1);
     return std::make_pair(std::make_pair(T, T), std::make_pair(T, T));
   }
 
   double A = (a1 - MIN_A) * (a1 - a2);
-  double B = 2 * (a1 - MIN_A) * term;
-  double C = term*term +
-    (a2 - MIN_A) * (2 * (x1 - x2 - v1*t1 + v2*t2) + a1*t1*t1 - a2*t2*t2);
+  double B = 2 * (a1 - MIN_A) * term1;
+  double C = term1*term1 + (a2 - MIN_A) * 2 * term2;
 
   double T1, T2;
+  std::cout << "ABC " << A << " " << B << " " << C << "\n";
   if (fabs(A) <= 1e-10) { // a1 == MIN_A || a1 == a2
     if (fabs(B) <= 1e-10) {
-      if (C <= -1e-10) return std::nullopt;
+      if (fabs(C) > 1e-10) return std::nullopt;
       return std::make_pair(std::make_pair(t1, t1), std::make_pair(t1, t1));
     }
 
@@ -73,8 +76,8 @@ tangent_solver(
     T2 = X + Y;
   }
 
-  double P1 = ((MIN_A - a1) * T1 - term) / (MIN_A - a2);
-  double P2 = ((MIN_A - a1) * T2 - term) / (MIN_A - a2);
+  double P1 = ((MIN_A - a1) * T1 - term1) / (MIN_A - a2);
+  double P2 = ((MIN_A - a1) * T2 - term1) / (MIN_A - a2);
   
   return std::make_pair(std::make_pair(T1, P1), std::make_pair(T2, P2));
 }

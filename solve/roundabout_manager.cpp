@@ -72,7 +72,7 @@ trajectory roundabout_manager::schedule(int index, modular<int> target) {
       schedule(front, target);
     } while (true);
     target = veh.progress;
-    
+
     // TODO: simplify logic
     if (target == veh.exit) break;
 
@@ -82,7 +82,9 @@ trajectory roundabout_manager::schedule(int index, modular<int> target) {
     int front = get_nearest_front(*target, cur_time);
     if (front != -1) {
       const trajectory& top_traj = _vehicles[front].get_traj(*target);
+      std::cout << veh.index << " bread 1\n";
       if (!traj.place_on_top(top_traj)) {
+      std::cout << veh.index << " bread 2\n";
         trajs.push_back({ *target, traj });
 
         double length = _roundabout.total_length();

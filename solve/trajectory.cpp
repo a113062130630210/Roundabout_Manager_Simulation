@@ -99,6 +99,8 @@ bool trajectory::place_on_top(const trajectory& t) {
 
         if (result) {
           auto [t_star, t_tang] = result.value();
+          std::cout << "tang " << t_star << " " << t_tang << "\n";
+          std::cout << *s_it << *t_it;
           double tmp_acc = s_it->acc;
 
           wipe_trajs(s_it);
@@ -228,6 +230,7 @@ void trajectory::split(split_iter iter, const split_iter& end) const {
       iter->second.sub_trajs.pop_back();
       iter->second.push_sub_traj(st_iter->leave_time, st_iter->acc);
       ++st_iter;
+      if (st_iter == sub_trajs.end()) return;
       iter->second.push_sub_traj(-1, st_iter->acc);
     }
     else {
@@ -259,9 +262,17 @@ trajectory& trajectory::push_sub_traj(double end_time, double acc) {
   }
 
   if (end_time < 0) {
-    double delta = ev*ev + 2 * acc * (leave_position - ex);
-    if (delta <= 1e-10) delta = 0; // if delta < 0, decelerate until v = 0
-    end_time = et + (sqrt(delta) - ev) / acc;
+    if (acc == 0) {
+      if (ev == 0) {
+        throw std::logic_error("trajectory::push_sub_traj\nthis should not happen");
+      }
+      end_time = et + (leave_position - ex) / ev;      
+    }
+    else {
+      double delta = ev*ev + 2 * acc * (leave_position - ex);
+      if (delta <= 1e-10) delta = 0; // if delta < 0, decelerate until v = 0
+      end_time = et + (sqrt(delta) - ev) / acc;
+    }
   }
 
   if (fabs(end_time - et) <= 1e-10) return *this;
