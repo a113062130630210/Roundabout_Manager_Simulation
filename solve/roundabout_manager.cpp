@@ -82,21 +82,26 @@ trajectory roundabout_manager::schedule(int index, modular<int> target) {
     int front = get_nearest_front(*target, cur_time);
     if (front != -1) {
       const trajectory& top_traj = _vehicles[front].get_traj(*target);
-      std::cout << veh.index << " bread 1\n";
       if (!traj.place_on_top(top_traj)) {
-      std::cout << veh.index << " bread 2\n";
         trajs.push_back({ *target, traj });
 
         double length = _roundabout.total_length();
         auto sec_id = target - 1;
         auto prev = trajs.rbegin() + 1;
         for (; prev != trajs.rend(); ++prev, sec_id -= 1) {
+          std::cout << "avoid front \n" << prev->second << top_traj;
           if (auto res = prev->second.avoid_front(top_traj, length)) {
             res->split(prev.base(), trajs.end());
             goto TEMP;
           }
         }
         if (prev == trajs.rend()) {
+          // for (auto& v: _vehicles) {
+          //   for (auto& [_, t]: v.trajs) {
+          //     std::cout << t;
+          //   }
+          //   std::cout << std::endl;
+          // }
           EXIT("roundabout_manager::schedule\nok this happened");
         }
       }
@@ -106,23 +111,8 @@ trajectory roundabout_manager::schedule(int index, modular<int> target) {
 
 TEMP:
     update_scheduling_table(*target, index, cur_time, true);
-
-    target += 1;
-    veh.progress += 1;
-    veh.arrival_time = cur_time = traj.leave_time;
-    veh.current_position = _roundabout.position_of(*target);
-    veh.init_velocity = traj.leave_velocity;
-  } while (target != veh.exit);
-
-  auto sec_id = veh.entry;
-  for (auto& [_, t]: trajs) {
-    // TODO: probably removable
-    update_scheduling_table(*sec_id, index, t.entry_time, true);
-
-    // pushes all vehicles in the same section upward
-    // to avoid violating safety constraint
-    double prev_entry = t.entry_time;
-    for (auto& [idx, entry_time, scheduled, is_entry]: _scheduling_table[*sec_id]) {
+    double prev_entry = cur_time;
+    for (auto& [idx, entry_time, scheduled, is_entry]: _scheduling_table[*target]) {
       if (scheduled || !is_entry) continue;
       double safe_time = prev_entry + TIME_GAP;
       auto& v = _vehicles[idx];
@@ -130,8 +120,12 @@ TEMP:
       prev_entry = v.arrival_time = entry_time = safe_time;
     }
 
-    sec_id += 1;
-  }
+    target += 1;
+    veh.progress += 1;
+    veh.arrival_time = cur_time = traj.leave_time;
+    veh.current_position = _roundabout.position_of(*target);
+    veh.init_velocity = traj.leave_velocity;
+  } while (target != veh.exit);
 
   return trajs[0].second;
 }

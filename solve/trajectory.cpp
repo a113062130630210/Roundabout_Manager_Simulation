@@ -99,8 +99,6 @@ bool trajectory::place_on_top(const trajectory& t) {
 
         if (result) {
           auto [t_star, t_tang] = result.value();
-          std::cout << "tang " << t_star << " " << t_tang << "\n";
-          std::cout << *s_it << *t_it;
           double tmp_acc = s_it->acc;
 
           wipe_trajs(s_it);

@@ -57,7 +57,6 @@ tangent_solver(
   double C = term1*term1 + (a2 - MIN_A) * 2 * term2;
 
   double T1, T2;
-  std::cout << "ABC " << A << " " << B << " " << C << "\n";
   if (fabs(A) <= 1e-10) { // a1 == MIN_A || a1 == a2
     if (fabs(B) <= 1e-10) {
       if (fabs(C) > 1e-10) return std::nullopt;
