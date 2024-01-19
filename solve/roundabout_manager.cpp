@@ -59,7 +59,6 @@ trajectory roundabout_manager::schedule(int index, modular<int> target) {
     std::cout << veh.index << ", section " << target << std::endl;
     do {
       int front = get_unscheduled_front(*target, cur_time);
-      // if (veh.index == 0 && *target == 0) EXIT("TEMP");
       if (front == -1) break;
       schedule(front, target);
     } while (true);

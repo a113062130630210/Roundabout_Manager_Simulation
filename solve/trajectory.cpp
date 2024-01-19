@@ -35,21 +35,21 @@ bool subtrajectory::conflict_with(const subtrajectory& traj) const {
     double time_at_front_position = (a == 0 ? d/v : (sqrt(delta) - v) / a) + t;
 
     if (
-      (this_is_front && time_at_front_position + TIME_GAP > entry_time) ||
-      (!this_is_front && traj.entry_time + TIME_GAP > time_at_front_position)
+      (this_is_front && time_at_front_position > entry_time) ||
+      (!this_is_front && traj.entry_time > time_at_front_position)
     ) return true;
   }
 
   // check if `*this` and `traj` intersects
   auto s = quadratic_solver(
-         entry_time           ,      entry_position,      entry_velocity,      acc, 
-    traj.entry_time + TIME_GAP, traj.entry_position, traj.entry_velocity, traj.acc
+         entry_time,      entry_position,      entry_velocity,      acc, 
+    traj.entry_time, traj.entry_position, traj.entry_velocity, traj.acc
   );
   if (!s) return false;
 
   // check if any of the intersection points is in the range of trajectories
-  double l_bound = std::max(entry_time, traj.entry_time + TIME_GAP);
-  double r_bound = std::min(leave_time, traj.leave_time + TIME_GAP);
+  double l_bound = std::max(entry_time, traj.entry_time);
+  double r_bound = std::min(leave_time, traj.leave_time);
   return (
     (l_bound < s->first && s->first < r_bound) || 
     (l_bound < s->second && s->second < r_bound)
@@ -88,7 +88,7 @@ trajectory::place_on_top(trajectory t, double ring_len) const {
   trajectory s = *this;
   auto s_it = s.sub_trajs.begin();
   if (s.entry_position == t.entry_position) {
-    while (s_it != s.sub_trajs.end()) {
+    for (; s_it != s.sub_trajs.end(); ++s_it) {
       auto iter = std::ranges::find_if(t.sub_trajs, [&s_it](auto& st) {
         return s_it->conflict_with(st);
       });
