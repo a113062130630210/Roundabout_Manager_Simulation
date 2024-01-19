@@ -38,7 +38,7 @@ tangent_solver(
   double t2, double x2, double v2, double a2
 ) {
   double term1 = v1 - v2 - a1*t1 + a2*t2;
-  double term2 = x1 - x2 - v1*t1 - v2*t2 + (a1*t1*t1 - a2*t2*t2) / 2;
+  double term2 = x1 - x2 - v1*t1 + v2*t2 + (a1*t1*t1 - a2*t2*t2) / 2;
 
   if (MIN_A == a2) {
     if (a1 == a2) {
@@ -67,7 +67,8 @@ tangent_solver(
   }
   else {
     double delta = B*B - 4*A*C;
-    if (delta <= 1e-10) return std::nullopt;
+    if (fabs(delta) <= 1e-10) delta = 0;
+    if (delta < -1e-10) return std::nullopt;
 
     double X = -B / (2*A);
     double Y = sqrt(delta) / (2*A);

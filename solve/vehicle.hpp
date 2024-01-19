@@ -7,21 +7,21 @@
 #include "types.hpp"
 
 struct vehicle {
-  vehicle(int, modular<int>, modular<int>, double, double, double);
+  vehicle(int, int, modular<int>, modular<int>, double, double, double);
 
   trajectory& get_traj(int);
   trajectory max_velocity(double) const;
 
-  int id;
-  int index;
+  const int id;
+  const int index;
 
-  modular<int> entry;
+  const modular<int> entry;
+  const modular<int> exit;
   modular<int> progress;
-  modular<int> exit;
 
-  double arrival_time;
-  double current_position;
-  double init_velocity;
+  double entry_time;
+  double cur_pos;
+  double entry_velocity;
   std::vector<std::pair<int, trajectory>> trajs;
 };
 std::ostream& operator<<(std::ostream& os, const vehicle& v);

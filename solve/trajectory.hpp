@@ -25,13 +25,10 @@ struct trajectory {
 
   trajectory(double, double, double, double);
 
-  bool place_on_top(const trajectory&);
+  std::optional<trajectory> place_on_top(trajectory, double) const;
   trajectory& push_sub_traj(double, double);
-  void clear_trajs();
-  void wipe_trajs(const sub_trajs_t::iterator&);
-
-  std::optional<trajectory> avoid_front(trajectory, double);
   void split(split_iter, const split_iter&) const;
+  void clear_trajs();
 
   int version;
   double entry_time;

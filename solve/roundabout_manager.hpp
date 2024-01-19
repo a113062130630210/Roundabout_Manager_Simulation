@@ -5,6 +5,11 @@
 
 class roundabout_manager {
 public:
+  struct read_data {
+    int id, entry, exit;
+    double arr, vel;
+  };
+
   struct schedule_info {
     schedule_info(int i, double t, bool s, bool ie): 
       index(i), entry_time(t), scheduled(s), is_entry(ie) {}
