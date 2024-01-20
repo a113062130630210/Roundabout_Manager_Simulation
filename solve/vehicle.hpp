@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "trajectory.hpp"
-#include "types.hpp"
+#include "modular.hpp"
 
 struct vehicle {
   vehicle(int, int, modular<int>, modular<int>, double, double, double);
