@@ -16,7 +16,7 @@ struct subtrajectory {
   double leave_velocity;
   double acc;
 
-  bool conflict_with(const subtrajectory&) const;
+  bool on_top_of(const subtrajectory&) const;
 };
 
 struct trajectory {

@@ -14,7 +14,7 @@ subtrajectory::subtrajectory
   entry_time(et), leave_time(lt), entry_position(ep), leave_position(lp), 
   entry_velocity(ev), leave_velocity(lv), acc(a) {}
 
-bool subtrajectory::conflict_with(const subtrajectory& traj) const {
+bool subtrajectory::on_top_of(const subtrajectory& traj) const {
   // check if `traj` is above `*this` (only entry time is checked)
   {
     bool this_is_front = entry_position >= traj.entry_position;
@@ -22,7 +22,7 @@ bool subtrajectory::conflict_with(const subtrajectory& traj) const {
     const subtrajectory& back  = this_is_front ? traj : *this;
 
     if (back.acc == 0 && back.entry_velocity == 0) {
-      EXIT("[ERROR] trajectory::is_conflict\nthis should not happen");
+      EXIT("[ERROR] subtrajectory::on_top_of\nthis should not happen");
     }
 
     double d = front.entry_position - back.entry_position;
@@ -88,7 +88,7 @@ trajectory::place_on_top(trajectory t, double ring_len) const {
   if (s.entry_position == t.entry_position) {
     for (; s_it != s.sub_trajs.end(); ++s_it) {
       auto iter = std::ranges::find_if(t.sub_trajs, [&s_it](auto& st) {
-        return s_it->conflict_with(st);
+        return s_it->on_top_of(st);
       });
       if (iter != t.sub_trajs.end()) break;
     }
