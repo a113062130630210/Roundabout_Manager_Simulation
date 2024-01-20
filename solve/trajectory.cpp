@@ -47,12 +47,12 @@ bool subtrajectory::conflict_with(const subtrajectory& traj) const {
   );
   if (!s) return false;
 
-  // check if any of the intersection points is in the range of trajectories
+  // check if any of the intersection pnoints is in the range of trajectories
   double l_bound = std::max(entry_time, traj.entry_time);
   double r_bound = std::min(leave_time, traj.leave_time);
   return (
-    (l_bound < s->first && s->first < r_bound) || 
-    (l_bound < s->second && s->second < r_bound)
+    (l_bound + 1e-10 < s->first && s->first + 1e-10 < r_bound) || 
+    (l_bound + 1e-10 < s->second && s->second + 1e-10 < r_bound)
   );
 };
 
@@ -68,9 +68,7 @@ trajectory::place_on_top(trajectory t, double ring_len) const {
     EXIT("[ERROR] place_on_top\ngot empty list");
   }
 
-  double length = t.leave_position - entry_position;
-  if (length < -1e-10) {
-    length += ring_len;
+  if (t.leave_position - entry_position < -1e-10) {
     t.entry_position += ring_len;
     t.leave_position += ring_len;
     for (auto& st: t.sub_trajs) {

@@ -79,11 +79,13 @@ trajectory roundabout_manager::schedule(int index, modular<int> target) {
       for (; iter != trajs.rend(); ++iter) {
         if (auto res = iter->second.place_on_top(top_traj, length)) {
           auto f_iter = iter.base() - 1;
+          auto sec_id = target - (int)(std::distance(f_iter, trajs.end()) - 1);
           res->split(f_iter, trajs.end());
-          std::for_each(f_iter, trajs.end(), [&target, &index, this](auto& t) {
-            update_scheduling_table(*target, index, t.second.entry_time, true);
+          std::for_each(f_iter, trajs.end(), [&sec_id, &index, this](auto& t) {
+            update_scheduling_table(*sec_id, index, t.second.entry_time, true);
+            sec_id += 1;
           });
-          goto TEMP;
+          break;
         }
       }
       if (iter == trajs.rend()) {
@@ -97,8 +99,7 @@ trajectory roundabout_manager::schedule(int index, modular<int> target) {
       }
     }
 
-TEMP:
-    double prev_entry = cur_time;
+    double prev_entry = trajs.back().second.entry_time;
     for (auto& [idx, entry_time, scheduled, is_entry]: _scheduling_table[*target]) {
       if (scheduled || !is_entry) continue;
       double safe_time = prev_entry + TIME_GAP;
@@ -142,8 +143,6 @@ void roundabout_manager::load_input(const std::string& filename) {
     double arr, vel;
     file >> id >> entry >> exit >> arr >> vel;
     data.emplace_back(id, entry, exit, arr, vel);
-
-
   }
 
   std::sort(data.begin(), data.end(), [](auto& a, auto& b) {
@@ -208,13 +207,13 @@ void roundabout_manager::insert_scheduling_table
 bool roundabout_manager::update_scheduling_table
 (int sec_id, int veh_index, double entry_time, bool scheduled) {
   auto& sec = _scheduling_table[sec_id];
-  auto it = std::find_if(sec.begin(), sec.end(), [veh_index](schedule_info& i) {
+  auto it = std::ranges::find_if(sec, [veh_index](schedule_info& i) {
     return i.index == veh_index;
   });
   
   if (it == sec.end()) return false;
-  it->entry_time = entry_time;
-  it->scheduled = scheduled;
+  sec.erase(it);
+  insert_scheduling_table(sec_id, veh_index, entry_time, scheduled);
   return true;
 }
 
