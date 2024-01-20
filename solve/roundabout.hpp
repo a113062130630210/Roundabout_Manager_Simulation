@@ -13,8 +13,8 @@ struct section {
 class roundabout {
 public:
   roundabout();
-  roundabout(const int, const std::vector<double>&);
-  roundabout(const int, std::vector<double>&&);
+  roundabout(const std::vector<double>&);
+  roundabout(std::vector<double>&&);
 
   int section_count() const;
   double total_length() const;

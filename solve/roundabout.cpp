@@ -1,27 +1,23 @@
-#include <numeric>
-
 #include "roundabout.hpp"
 
 section::section(int i, double l, double p): 
   index(i), length(l), position(p) {}
 
 roundabout::roundabout() {
-  roundabout(0, {});
+  roundabout(std::vector<double>());
 }
 
-roundabout::roundabout
-(const int c, const std::vector<double>& l): _section_count(c) {
+roundabout::roundabout(const std::vector<double>& l): _section_count(l.size()) {
   _total_length = 0;
-  for (int i = 0; i < c; i++) {
+  for (int i = 0; i < _section_count; i++) {
     _sections.push_back(section(i, l[i], _total_length));
     _total_length += l[i];
   }
 }
 
-roundabout::roundabout
-(const int c, std::vector<double>&& l): _section_count(c) {
+roundabout::roundabout(std::vector<double>&& l): _section_count(l.size()) {
   _total_length = 0;
-  for (int i = 0; i < c; i++) {
+  for (int i = 0; i < _section_count; i++) {
     _sections.push_back(section(i, l[i], _total_length));
     _total_length += l[i];
   }

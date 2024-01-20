@@ -134,7 +134,7 @@ void roundabout_manager::load_input(const std::string& filename) {
     sections.push_back(t);
   }
 
-  _roundabout = roundabout(M, std::move(sections));
+  _roundabout = roundabout(std::move(sections));
 
   std::vector<read_data> data;
   data.reserve(N);
@@ -192,12 +192,12 @@ void roundabout_manager::insert_scheduling_table
   auto& sec = _scheduling_table[sec_id];
 
   // insertion fail if the entry already exists
-  auto it = std::find_if(sec.begin(), sec.end(), [veh_index](schedule_info& i) {
+  auto it = std::ranges::find_if(sec, [veh_index](schedule_info& i) {
     return i.index == veh_index;
   });
   if (it != sec.end()) return;
 
-  it = std::find_if(sec.begin(), sec.end(), [entry_time](schedule_info& i) {
+  it = std::ranges::find_if(sec, [entry_time](schedule_info& i) {
     return i.entry_time >= entry_time;
   });
 
