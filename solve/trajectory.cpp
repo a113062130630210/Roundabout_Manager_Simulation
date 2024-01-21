@@ -22,7 +22,7 @@ bool subtrajectory::on_top_of(const subtrajectory& traj) const {
     const subtrajectory& back  = this_is_front ? traj : *this;
 
     if (back.acc == 0 && back.entry_velocity == 0) {
-      EXIT("[ERROR] subtrajectory::on_top_of\nthis should not happen");
+      throw std::logic_error("subtrajectory::on_top_of this should not happen");
     }
 
     double d = front.entry_position - back.entry_position;
@@ -65,7 +65,7 @@ trajectory::trajectory(double t, double ep, double lp, double v):
 std::optional<trajectory>
 trajectory::place_on_top(trajectory t, double ring_len) const {
   if (sub_trajs.empty() || t.sub_trajs.empty()) {
-    EXIT("[ERROR] place_on_top\ngot empty list");
+    throw std::logic_error("trajectory::place_on_top got empty list");
   }
 
   if (t.leave_position - entry_position < -1e-10) {
@@ -144,12 +144,12 @@ trajectory::place_on_top(trajectory t, double ring_len) const {
             }
             else {
               result.push_sub_traj(t_tang, MIN_A);
-              result.push_sub_traj(t_it->leave_time, t_it->acc);
+              result.push_sub_traj(-1, t_it->acc, t_it->leave_position);
             }
           }
 
           for (auto it = t_it + 1; it != t.sub_trajs.end(); it++) {
-            result.push_sub_traj(it->leave_time, it->acc);
+            result.push_sub_traj(-1, it->acc, it->leave_position);
           }
           return result;
         }
@@ -190,10 +190,14 @@ void trajectory::split(split_iter iter, const split_iter& end) const {
     }
   }
 
-  throw std::logic_error("this should not happen");
+  throw std::logic_error("trajectory::split this should not happen");
 }
 
 trajectory& trajectory::push_sub_traj(double end_time, double acc) {
+  return push_sub_traj(end_time, acc, leave_position);
+}
+
+trajectory& trajectory::push_sub_traj(double end_time, double acc, double lp) {
   double et, ex, ev;
   if (sub_trajs.empty()) {
     et = entry_time;
@@ -210,12 +214,12 @@ trajectory& trajectory::push_sub_traj(double end_time, double acc) {
   if (end_time < 0) {
     if (acc == 0) {
       if (ev == 0) {
-        throw std::logic_error("trajectory::push_sub_traj\nthis should not happen");
+        throw std::logic_error("trajectory::push_sub_traj this should not happen");
       }
-      end_time = et + (leave_position - ex) / ev;      
+      end_time = et + (lp - ex) / ev;      
     }
     else {
-      double delta = ev*ev + 2 * acc * (leave_position - ex);
+      double delta = ev*ev + 2 * acc * (lp - ex);
       if (delta <= 1e-10) delta = 0; // if delta < 0, decelerate until v = 0
       end_time = et + (sqrt(delta) - ev) / acc;
     }
@@ -223,7 +227,7 @@ trajectory& trajectory::push_sub_traj(double end_time, double acc) {
 
   if (fabs(end_time - et) <= 1e-10) return *this;
   if (end_time < et) {
-    EXIT("[ERROR] trajectory::push_sub_traj\ninfeasible end time");
+    throw std::logic_error("trajectory::push_sub_traj infeasible end time");
   }
 
   double t = end_time - et;
@@ -231,7 +235,7 @@ trajectory& trajectory::push_sub_traj(double end_time, double acc) {
   double lv = ev + acc * t;
 
   if (lx > leave_position + 1e-10) {
-    EXIT("[ERROR] trajectory::push_sub_traj\nposition out of range");
+    throw std::logic_error("trajectory::push_sub_traj position out of range");
   }
 
   leave_time = end_time;

@@ -3,20 +3,22 @@ all: main
 CXX = g++
 CPPFLAGS = -std=c++20 -O2 -Wall -Werror -Wextra
 
-main: build build/main.o build/roundabout_manager.o build/roundabout.o build/vehicle.o build/trajectory.o build/modular.o build/util.o
+main: build build/main.o build/roundabout_manager.o build/roundabout.o build/vehicle.o build/scheduling_table.o build/trajectory.o build/modular.o build/util.o
 	cd build; \
-	$(CXX) -o run.exe main.o roundabout_manager.o roundabout.o vehicle.o trajectory.o modular.o util.o
+	$(CXX) -o run.exe main.o roundabout_manager.o roundabout.o vehicle.o scheduling_table.o trajectory.o modular.o util.o
 
 build: 
 	mkdir build
 build/main.o: main.cpp roundabout_manager.hpp roundabout.hpp vehicle.hpp
 	$(CXX) $(CPPFLAGS) -c main.cpp -o build/main.o
-build/roundabout_manager.o: roundabout_manager.cpp roundabout_manager.hpp roundabout.hpp vehicle.hpp
+build/roundabout_manager.o: roundabout_manager.cpp roundabout_manager.hpp roundabout.hpp scheduling_table.hpp vehicle.hpp
 	$(CXX) $(CPPFLAGS) -c roundabout_manager.cpp -o build/roundabout_manager.o
 build/roundabout.o: roundabout.cpp roundabout.hpp vehicle.hpp
 	$(CXX) $(CPPFLAGS) -c roundabout.cpp -o build/roundabout.o
 build/vehicle.o: vehicle.cpp vehicle.hpp trajectory.hpp modular.hpp
 	$(CXX) $(CPPFLAGS) -c vehicle.cpp -o build/vehicle.o
+build/scheduling_table.o: scheduling_table.cpp scheduling_table.hpp vehicle.hpp constants.hpp
+	$(CXX) $(CPPFLAGS) -c scheduling_table.cpp -o build/scheduling_table.o
 build/trajectory.o: trajectory.cpp trajectory.hpp vehicle.hpp constants.hpp util.hpp
 	$(CXX) $(CPPFLAGS) -c trajectory.cpp -o build/trajectory.o
 build/modular.o: modular.hpp
