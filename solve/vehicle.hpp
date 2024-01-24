@@ -9,8 +9,8 @@
 struct vehicle {
   vehicle(int, int, modular<int>, modular<int>, double, double, double);
 
-  trajectory& get_traj(int);
-  trajectory max_velocity(double) const;
+  std::vector<trajectory>::iterator get_traj(const modular<int>&);
+  void max_velocity(trajectory&, double) const;
 
   const int id;
   const int index;
@@ -22,6 +22,6 @@ struct vehicle {
   double entry_time;
   double cur_pos;
   double entry_velocity;
-  std::vector<std::pair<int, trajectory>> trajs;
+  std::vector<trajectory> trajs;
 };
 std::ostream& operator<<(std::ostream& os, const vehicle& v);

@@ -23,5 +23,5 @@ private:
   scheduling_table _table;
   bool _solved;
 
-  trajectory schedule(int, modular<int>);
+  void schedule(int, modular<int>);
 };

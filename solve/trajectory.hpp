@@ -16,15 +16,16 @@ struct subtrajectory {
   double leave_velocity;
   double acc;
 
-  bool on_top_of(const subtrajectory&) const;
+  bool conflict_with(const subtrajectory&) const;
 };
 
 struct trajectory {
-  using split_iter = std::vector<std::pair<int, trajectory>>::iterator;
+  using split_iter = std::vector<trajectory>::iterator;
 
   trajectory(double, double, double, double);
 
   std::optional<trajectory> place_on_top(trajectory, double) const;
+  bool conflict_with(trajectory) const;
   trajectory& push_sub_traj(double, double);
   trajectory& push_sub_traj(double, double, double);
   void split(split_iter, const split_iter&) const;

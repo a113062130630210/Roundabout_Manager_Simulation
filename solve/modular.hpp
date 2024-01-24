@@ -45,6 +45,8 @@ public:
   modular<T>& operator-=(const modular<T>&);
   modular<T>& operator+=(const T&);
   modular<T>& operator-=(const T&);
+  modular<T>& operator++();
+  modular<T>& operator--();
   
   T operator*() const;
 
@@ -137,6 +139,20 @@ modular<T>& modular<T>::operator-=(const T& rhs) {
   _i -= rhs;
   T t = floor(_i / _n);
   _i -= t * _n;
+  return *this;
+}
+
+template<typename T>
+modular<T>& modular<T>::operator++() {
+  ++_i;
+  if (_i >= _n) _i -= _n;
+  return *this;
+}
+
+template<typename T>
+modular<T>& modular<T>::operator--(){
+  --_i;
+  if (_i < 0) _i += _n;
   return *this;
 }
 

@@ -10,27 +10,40 @@ roundabout_manager::roundabout_manager(): _solved(false) {}
 void roundabout_manager::solve() {
   std::cout << "Solving..." << std::endl;
 
-  const int M = _roundabout.section_count();
-  
-
   for (auto& v: _vehicles) {
-    if (!v.trajs.empty()) continue;
+    if (v.progress == v.exit) continue;
     schedule(v.index, v.entry);
-    for (auto& u: _vehicles) {
-      if (u.trajs.empty()) continue;
-      for (auto& [sec_id, t]: u.trajs) {
-        if (t.front_traj && t.front_traj->version != t.front_traj_ver) {
-          schedule(u.index, { M, sec_id });
+
+    bool detected;
+    do {
+      detected = false;
+      for (auto& u: _vehicles) {
+        auto sec_id = u.entry;
+        for (auto& t: u.trajs) {
+          if (t.front_traj && t.front_traj->version != t.front_traj_ver) {
+            if (t.conflict_with(*t.front_traj)) {
+              detected = true;
+              u.progress = sec_id;
+              u.entry_time = t.entry_time;
+              u.cur_pos = t.entry_position;
+              u.entry_velocity = t.entry_velocity;
+              schedule(u.index, sec_id);
+              break;
+            }
+
+            t.front_traj_ver = t.front_traj->version;
+          }
+          ++sec_id;
         }
       }
-    }
+    } while (detected);
   }
 
   _solved = true;
   std::cout << "Solved." << std::endl;
 }
 
-trajectory roundabout_manager::schedule(int index, modular<int> target) {
+void roundabout_manager::schedule(int index, modular<int> target) {
   vehicle& veh      = _vehicles[index];
   double   cur_time = _table.get(*target, index).entry_time;
   double   length   = _roundabout.total_length();
@@ -39,10 +52,11 @@ trajectory roundabout_manager::schedule(int index, modular<int> target) {
   do {
     _table.insert(*target, index, cur_time, false);
 
-    std::cout << "[VEH " << veh.index << ", SEC " << target << "]" << std::endl;
+    std::cout << "[VEH " << index << ", SEC " << target << "]" << std::endl;
     do {
       auto front = _table.get_unscheduled_front(*target, cur_time);
       if (front.index == -1) break;
+      // TODO: better yielding criteria
       if (front.entry_time + 0.3 >= cur_time) {
         _table.push(*target, cur_time);
         break;
@@ -51,56 +65,64 @@ trajectory roundabout_manager::schedule(int index, modular<int> target) {
       cur_time = _table.get(*target, index).entry_time;
     } while (true);
 
-    // TODO: simplify logic
     if (veh.progress == veh.exit) break;
 
     target = veh.progress;
-    veh.entry_time = cur_time;
     _table.update(*target, index, cur_time, true);
 
-    double sec_length = _roundabout.length_of(*target);
-    trajectory traj = veh.max_velocity(sec_length);
-    trajs.emplace_back(*target, traj);
+    auto traj_iter = veh.get_traj(target);
+    if (traj_iter == trajs.end()) {
+      throw std::logic_error("roundabout_manager::schedule trajectory not found");
+    }
 
-    auto front = _table.get_nearest_front(*target, cur_time);
+    veh.entry_time = cur_time;
+    veh.max_velocity(*traj_iter, _roundabout.length_of(*target));
+
+    int front = _table.get_nearest_front(*target, cur_time);
     if (front != -1) {
-      const auto& top_traj = _vehicles[front].get_traj(*target);
-      auto iter = trajs.rbegin();
-      for (; iter != trajs.rend(); ++iter) {
-        if (auto res = iter->second.place_on_top(top_traj, length)) {
-          auto f_iter = iter.base() - 1;
-          auto sec_id = target - (int)(std::distance(f_iter, trajs.end()) - 1);
-          res->split(f_iter, trajs.end());
-          std::for_each(f_iter, trajs.end(), [&sec_id, &index, this](auto& t) {
-            _table.update(*sec_id, index, t.second.entry_time, true);
-            sec_id += 1;
+      auto front_iter = _vehicles[front].get_traj(target);
+      if (front_iter == _vehicles[front].trajs.end()) {
+        throw std::logic_error("roundabout_manager::schedule trajectory not found");
+      }
+
+      const auto& top_traj = *front_iter;
+      auto iter = traj_iter;
+      for (; iter >= trajs.begin(); --iter) {
+        if (auto res = iter->place_on_top(top_traj, length)) {
+          auto sec_id = veh.entry + (int)(iter - trajs.begin());
+          res->split(iter, traj_iter + 1);
+          std::for_each(iter, traj_iter + 1, [&sec_id, &index, this](auto& t) {
+            _table.update(*sec_id, index, t.entry_time, true);
+            ++t.version;
+            ++sec_id;
           });
+
+          traj_iter->front_traj = &top_traj;
+          traj_iter->front_traj_ver = top_traj.version;
           break;
         }
       }
-      if (iter == trajs.rend()) {
+      if (iter < trajs.begin()) {
         // for (auto& v: _vehicles) {
         //   for (auto& [_, t]: v.trajs) {
         //     std::cout << t;
         //   }
         //   std::cout << std::endl;
         // }
-        EXIT("roundabout_manager::schedule\nok this happened");
+        throw std::logic_error("roundabout_manager::schedule ok this happened");
       }
     }
 
-    std::cout << "<VEH " << veh.index << ", SEC " << target << ">" << std::endl;
+    std::cout << "<VEH " << index << ", SEC " << target << ">" << std::endl;
 
-    _table.push(*target, trajs.back().second.entry_time);
+    _table.push(*target, traj_iter->entry_time);
 
-    target += 1;
-    veh.progress += 1;
-    veh.entry_time = cur_time = trajs.back().second.leave_time;
+    ++target;
+    ++veh.progress;
+    veh.entry_time = cur_time = traj_iter->leave_time;
     veh.cur_pos = _roundabout.position_of(*target);
-    veh.entry_velocity = trajs.back().second.leave_velocity;
+    veh.entry_velocity = traj_iter->leave_velocity;
   } while (target != veh.exit);
-
-  return trajs[0].second;
 }
 
 void roundabout_manager::load_input(const std::string& filename) {
@@ -161,8 +183,8 @@ void roundabout_manager::print_result
   }
 
   for (auto& v: _vehicles) {
-    format_file << v.id << " " << v.trajs.back().second.leave_time;
-    for (auto& [_, traj]: v.trajs) {
+    format_file << v.id << " " << v.trajs.back().leave_time;
+    for (auto& traj: v.trajs) {
       latex_file << traj;
 
       for (auto& st: traj.sub_trajs) {

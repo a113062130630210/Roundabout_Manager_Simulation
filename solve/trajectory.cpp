@@ -14,45 +14,43 @@ subtrajectory::subtrajectory
   entry_time(et), leave_time(lt), entry_position(ep), leave_position(lp), 
   entry_velocity(ev), leave_velocity(lv), acc(a) {}
 
-bool subtrajectory::on_top_of(const subtrajectory& traj) const {
-  // check if `traj` is above `*this` (only entry time is checked)
+bool subtrajectory::conflict_with(const subtrajectory& st) const {
   {
-    bool this_is_front = entry_position >= traj.entry_position;
-    const subtrajectory& front = this_is_front ? *this : traj;
-    const subtrajectory& back  = this_is_front ? traj : *this;
+    double l_x_bound = std::max(entry_position, st.entry_position);
+    double r_x_bound = std::min(leave_position, st.leave_position);
+    if (l_x_bound > r_x_bound) return false;
 
-    if (back.acc == 0 && back.entry_velocity == 0) {
-      throw std::logic_error("subtrajectory::on_top_of this should not happen");
-    }
-
-    double d = front.entry_position - back.entry_position;
-    double a = back.acc;
-    double v = back.entry_velocity;
-    double t = back.entry_time;
-
+    double middle = (l_x_bound + r_x_bound) / 2;
+    double d = middle - entry_position;
+    double v = entry_velocity;
+    double a = acc;
     double delta = v*v + 2*a*d;
     if (fabs(delta) <= 1e-10) delta = 0;
-    double time_at_front_position = (a == 0 ? d/v : (sqrt(delta) - v) / a) + t;
+    double s_time = (a == 0 ? d/v : (sqrt(delta) - v) / a) + entry_time;
 
-    if (
-      (this_is_front && time_at_front_position > entry_time) ||
-      (!this_is_front && traj.entry_time > time_at_front_position)
-    ) return true;
+    d = middle - st.entry_position;
+    v = st.entry_velocity;
+    a = st.acc;
+    delta = v*v + 2*a*d;
+    if (fabs(delta) <= 1e-10) delta = 0;
+    double t_time = (a == 0 ? d/v : (sqrt(delta) - v) / a) + st.entry_time;
+
+    if (s_time < t_time) return true;
   }
 
   // check if `*this` and `traj` intersects
   auto s = quadratic_solver(
-         entry_time,      entry_position,      entry_velocity,      acc, 
-    traj.entry_time, traj.entry_position, traj.entry_velocity, traj.acc
+       entry_time,    entry_position,    entry_velocity,    acc, 
+    st.entry_time, st.entry_position, st.entry_velocity, st.acc
   );
   if (!s) return false;
 
   // check if any of the intersection pnoints is in the range of trajectories
-  double l_bound = std::max(entry_time, traj.entry_time);
-  double r_bound = std::min(leave_time, traj.leave_time);
+  double l_t_bound = std::max(entry_time, st.entry_time);
+  double r_t_bound = std::min(leave_time, st.leave_time);
   return (
-    (l_bound + 1e-10 < s->first && s->first + 1e-10 < r_bound) || 
-    (l_bound + 1e-10 < s->second && s->second + 1e-10 < r_bound)
+    (l_t_bound + 1e-10 < s->first  && s->first  + 1e-10 < r_t_bound) || 
+    (l_t_bound + 1e-10 < s->second && s->second + 1e-10 < r_t_bound)
   );
 };
 
@@ -88,7 +86,7 @@ trajectory::place_on_top(trajectory t, double ring_len) const {
   if (s.entry_position == t.entry_position) {
     for (; s_it != s.sub_trajs.end(); ++s_it) {
       auto iter = std::ranges::find_if(t.sub_trajs, [&s_it](auto& st) {
-        return s_it->on_top_of(st);
+        return s_it->conflict_with(st);
       });
       if (iter != t.sub_trajs.end()) break;
     }
@@ -160,33 +158,53 @@ trajectory::place_on_top(trajectory t, double ring_len) const {
   return std::nullopt;
 }
 
+bool trajectory::conflict_with(trajectory t) const {
+  t.entry_time += TIME_GAP;
+  t.leave_time += TIME_GAP;
+  for (auto& st: t.sub_trajs) {
+    st.entry_time += TIME_GAP;
+    st.leave_time += TIME_GAP;
+  }
+
+  auto s_it = sub_trajs.begin();
+  auto t_it = t.sub_trajs.begin();
+  while (s_it != sub_trajs.end() && t_it != t.sub_trajs.end()) {
+    if (s_it->conflict_with(*t_it)) return true;
+    bool s_step = false, t_step = false;
+    if (s_it->leave_position <= t_it->leave_position + 1e-10) s_step = true;
+    if (t_it->leave_position <= s_it->leave_position + 1e-10) t_step = true;
+    if (s_step) ++s_it;
+    if (t_step) ++t_it;
+  }
+  return false;
+}
+
 void trajectory::split(split_iter iter, const split_iter& end) const {
   auto st_iter = sub_trajs.cbegin();
-  iter->second.entry_time = entry_time;
-  iter->second.entry_velocity = entry_velocity;
-  iter->second.clear_trajs();
-  iter->second.push_sub_traj(-1, st_iter->acc);
+  iter->entry_time = entry_time;
+  iter->entry_velocity = entry_velocity;
+  iter->clear_trajs();
+  iter->push_sub_traj(-1, st_iter->acc);
 
   while (true) {
-    if (iter->second.leave_time > st_iter->leave_time + 1e-10) {
-      iter->second.sub_trajs.pop_back();
-      iter->second.push_sub_traj(st_iter->leave_time, st_iter->acc);
+    if (iter->leave_time > st_iter->leave_time + 1e-10) {
+      iter->sub_trajs.pop_back();
+      iter->push_sub_traj(st_iter->leave_time, st_iter->acc);
       ++st_iter;
       if (st_iter == sub_trajs.cend()) return;
-      iter->second.push_sub_traj(-1, st_iter->acc);
+      iter->push_sub_traj(-1, st_iter->acc);
     }
     else {
-      if (fabs(iter->second.leave_time - st_iter->leave_time) <= 1e-10) {
+      if (fabs(iter->leave_time - st_iter->leave_time) <= 1e-10) {
         ++st_iter;
         if (st_iter == sub_trajs.cend()) return;
       }
-      iter->second.version++;
       ++iter;
       if (iter == end) return;
-      iter->second.entry_time = (iter-1)->second.leave_time;
-      iter->second.entry_velocity = (iter-1)->second.leave_velocity;
-      iter->second.clear_trajs();
-      iter->second.push_sub_traj(-1, st_iter->acc);
+      iter->entry_time = (iter-1)->leave_time;
+      iter->entry_velocity = (iter-1)->leave_velocity;
+      iter->clear_trajs();
+      iter->push_sub_traj(-1, st_iter->acc);
     }
   }
 

@@ -7,30 +7,32 @@
 
 vehicle::vehicle
 (int i, int idx, modular<int> in, modular<int> out, double at, double cp, double iv):
-id(i), index(idx), entry(in), exit(out), progress(in), entry_time(at), cur_pos(cp), entry_velocity(iv) {
-  trajs.reserve(*(out - in));
+id(i), index(idx), entry(in), exit(out), progress(in), 
+entry_time(at), cur_pos(cp), entry_velocity(iv) {
+  trajs = std::vector<trajectory>(*(out - in), { 0, 0, 0, 0 });
 }
 
-trajectory& vehicle::get_traj(int sec_id) {
-  auto it = std::find_if(trajs.begin(), trajs.end(), [sec_id](auto& t) {
-    return t.first == sec_id;
-  });
-  if (it == trajs.end()) {
-    throw std::range_error("invalid section id");
-  }
-  return it->second;
+std::vector<trajectory>::iterator
+vehicle::get_traj(const modular<int>& sec_id) {
+  int index = *(sec_id - entry);
+  if (index > *(exit - entry)) return trajs.end();
+  return trajs.begin() + index;
 }
 
 // returns the trajectory of the vehicle if it travels
 // at the max acceleration until the max velocity
-trajectory vehicle::max_velocity(double length) const {
-  trajectory t(entry_time, cur_pos, cur_pos + length, entry_velocity);
+void vehicle::max_velocity(trajectory& t, double length) const {
+  t.entry_time = entry_time;
+  t.entry_position = cur_pos;
+  t.leave_position = cur_pos + length;
+  t.entry_velocity = entry_velocity;
+  t.sub_trajs.clear();
 
   // already at the max speed, don't accelerate
   if (entry_velocity >= MAX_V) {
     double time_at_cst_v = length / MAX_V;
     t.push_sub_traj(entry_time + time_at_cst_v, 0);
-    return t;
+    return;
   }
 
   // run at max acceleration until the max velocity
@@ -52,8 +54,7 @@ trajectory vehicle::max_velocity(double length) const {
     t.push_sub_traj(entry_time + time_at_max_a, MAX_A);
     t.push_sub_traj(entry_time + time_at_max_a + time_at_cst_v, 0);
   }
-
-  return t;
+  return;
 }
 
 
@@ -78,7 +79,7 @@ std::ostream& operator<<(std::ostream& os, const vehicle& v) {
      << "\texit:           " << v.exit << "\n"
      << "\tentry_time:   " << v.entry_time << "\n"
      << "\tentry_velocity:  " << v.entry_velocity << "\n";
-  for (auto& [_, t]: v.trajs) {
+  for (auto& t: v.trajs) {
     os << t;
   }
 
