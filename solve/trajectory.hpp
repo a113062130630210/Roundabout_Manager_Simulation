@@ -20,7 +20,9 @@ struct subtrajectory {
 };
 
 struct trajectory {
-  using split_iter = std::vector<trajectory>::iterator;
+public:
+  using t_iter = std::vector<trajectory>::iterator;
+  using st_iter = std::vector<subtrajectory>::iterator;
 
   trajectory(double, double, double, double);
 
@@ -28,7 +30,7 @@ struct trajectory {
   bool conflict_with(trajectory) const;
   trajectory& push_sub_traj(double, double);
   trajectory& push_sub_traj(double, double, double);
-  void split(split_iter, const split_iter&) const;
+  void split(t_iter, const t_iter&) const;
   void clear_trajs();
 
   int version;
@@ -42,6 +44,12 @@ struct trajectory {
 
   int front_traj_ver;
   trajectory const * front_traj;
+
+private:
+  std::optional<std::pair<double, double>>
+  find_tangent(const st_iter&, const st_iter&, const st_iter&) const;
+  std::optional<double>
+  find_point(const st_iter&, const st_iter&) const;
 };
 
 std::ostream& operator<<(std::ostream& os, const subtrajectory& st);

@@ -82,3 +82,18 @@ tangent_solver(
   return std::make_pair(std::make_pair(T1, P1), std::make_pair(T2, P2));
 }
 
+std::optional<std::pair<double, double>>
+point_solver(double t1, double x1, double v1, double a1, double t, double x) {
+  double da = MIN_A - a1;
+  double dt = t - t1;
+  double A = da / 2;
+  double B = -da * t;
+  double C = (a1*dt*dt + da*t*t) / 2 + v1*dt + x1 - x;
+
+  double delta = B*B - 4*A*C;
+  if (fabs(delta) <= 1e-10) delta = 0;
+  if (delta < -1e-10) return std::nullopt;
+
+  delta = sqrt(delta) / da;
+  return std::make_pair(t - delta, t + delta);
+}
