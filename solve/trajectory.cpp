@@ -18,7 +18,7 @@ bool subtrajectory::conflict_with(const subtrajectory& st) const {
   {
     double l_x_bound = std::max(entry_position, st.entry_position);
     double r_x_bound = std::min(leave_position, st.leave_position);
-    if (l_x_bound > r_x_bound) return false;
+    if (l_x_bound > r_x_bound + 1e-10) return false;
 
     double middle = (l_x_bound + r_x_bound) / 2;
     double d = middle - entry_position;
@@ -35,7 +35,7 @@ bool subtrajectory::conflict_with(const subtrajectory& st) const {
     if (fabs(delta) <= 1e-10) delta = 0;
     double t_time = (a == 0 ? d/v : (sqrt(delta) - v) / a) + st.entry_time;
 
-    if (s_time < t_time) return true;
+    if (s_time + 1e-10 < t_time) return true;
   }
 
   // check if `*this` and `traj` intersects
@@ -98,7 +98,7 @@ trajectory::place_on_top(trajectory t, double ring_len) const {
 
   for (; s_it >= s.sub_trajs.begin(); --s_it) {
     if (s_it->acc == MIN_A) continue;
-    for (auto t_it = t.sub_trajs.begin(); t_it != t.sub_trajs.end(); ++t_it) {
+    for (auto t_it = t.sub_trajs.end()-1; t_it >= t.sub_trajs.begin(); --t_it) {
       if (t_it->leave_position + 1e-10 < s_it->entry_position) continue;
 
       if (t_it->acc != MIN_A) {
@@ -124,7 +124,7 @@ trajectory::place_on_top(trajectory t, double ring_len) const {
         }
       }
 
-      {
+      if (t_it == t.sub_trajs.end() - 1) {
         auto solution = find_point(s_it, t_it);
         if (!solution) continue;
 

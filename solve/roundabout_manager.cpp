@@ -86,6 +86,12 @@ void roundabout_manager::schedule(int index, modular<int> target) {
       }
 
       const auto& top_traj = *front_iter;
+      if (veh.progress == veh.entry && top_traj.entry_time + TIME_GAP > cur_time) {
+        cur_time = veh.entry_time = top_traj.entry_time + TIME_GAP;
+        veh.max_velocity(*traj_iter, _roundabout.length_of(*target));
+        _table.update(*target, index, cur_time, true);
+      }
+
       auto iter = traj_iter;
       for (; iter >= trajs.begin(); --iter) {
         if (auto res = iter->place_on_top(top_traj, length)) {
