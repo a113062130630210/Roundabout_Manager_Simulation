@@ -14,7 +14,7 @@ public:
   };
 
   void load(int, const std::vector<vehicle>&);
-  bool insert(int, int, double, bool);
+  bool insert(int, int, double, bool, bool = false);
   bool update(int, int, double, bool);
   void push(int, double);
   const entry& get(int, int) const;

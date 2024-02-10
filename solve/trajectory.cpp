@@ -165,18 +165,23 @@ std::optional<std::pair<double, double>> trajectory::find_tangent
   if (!solutions) return std::nullopt;
 
   auto& [sol1, sol2] = solutions.value();
+  double a = s_it->acc - MIN_A;
+  double b = s_it->entry_velocity - s_it->acc * s_it->entry_time;
+
   if (
     s_it->entry_time <= sol1.first + 1e-10 && 
     sol1.first <= sol1.second + 1e-10 && 
     sol1.first <= s_it->leave_time + 1e-10 &&
-    (sol1.second <= t_it->leave_time + 1e-10 || t_it == t_end - 1)
+    (sol1.second <= t_it->leave_time + 1e-10 || t_it == t_end - 1) &&
+    a * sol1.first + MIN_A * sol1.second + b + 1e-10 >= 0
   ) return sol1;
 
   if (
     s_it->entry_time <= sol2.first + 1e-10 && 
     sol2.first <= sol2.second + 1e-10 && 
     sol2.first <= s_it->leave_time + 1e-10 &&
-    (sol2.second <= t_it->leave_time + 1e-10 || t_it == t_end - 1)
+    (sol2.second <= t_it->leave_time + 1e-10 || t_it == t_end - 1) &&
+    a * sol2.first + MIN_A * sol2.second + b + 1e-10 >= 0
   ) return sol2;
 
   return std::nullopt;
@@ -191,15 +196,17 @@ trajectory::find_point(const st_iter& s_it, const st_iter& t_it) const {
   if (!solutions) return std::nullopt;
 
   auto& [sol1, sol2] = solutions.value();
-  double a = s_it->acc - MIN_A;
-  double b = s_it->entry_velocity - s_it->acc * s_it->entry_time + MIN_A * t_it->leave_time;
+  double a1 = s_it->acc;
+  double b1 = s_it->entry_velocity - s_it->acc * s_it->entry_time;
+  double a2 = s_it->acc - MIN_A;
+  double b2 = s_it->entry_velocity - s_it->acc * s_it->entry_time + MIN_A * t_it->leave_time;
   if (
     s_it->entry_time <= sol1 + 1e-10 && sol1 <= s_it->leave_time + 1e-10 &&
-    sol1 <= t_it->leave_time + 1e-10 && a * sol1 + b + 1e-10 >= 0
+    sol1 <= t_it->leave_time + 1e-10 && a1 * sol1 + b1 + 1e-10 >= 0 && a2 * sol1 + b2 + 1e-10 >= 0
   ) return sol1;
   if (
     s_it->entry_time <= sol2 + 1e-10 && sol2 <= s_it->leave_time + 1e-10 &&
-    sol2 <= t_it->leave_time + 1e-10 && a * sol2 + b + 1e-10 >= 0
+    sol2 <= t_it->leave_time + 1e-10 && a1 * sol2 + b1 + 1e-10 >= 0 && a2 * sol2 + b2 + 1e-10 >= 0
   ) return sol2;
   return std::nullopt;
 }

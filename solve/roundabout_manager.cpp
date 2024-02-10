@@ -79,6 +79,7 @@ void roundabout_manager::schedule(int index, modular<int> target) {
     veh.max_velocity(*traj_iter, _roundabout.length_of(*target));
 
     int front = _table.get_nearest_front(*target, cur_time);
+    int pushed_vehicle = -1;
     if (front != -1) {
       auto front_iter = _vehicles[front].get_traj(target);
       if (front_iter == _vehicles[front].trajs.end()) {
@@ -109,14 +110,32 @@ void roundabout_manager::schedule(int index, modular<int> target) {
         }
       }
       if (iter < trajs.begin()) {
-        // std::cout << veh << top_traj;
+        // std::cout << veh << "\n" << top_traj;
         throw std::logic_error("roundabout_manager::schedule ok this happened");
+      }
+
+      int new_front = _table.get_nearest_front(*target, traj_iter->entry_time);
+      if (front != new_front) {
+        if (_vehicles[new_front].entry != target) {
+          throw std::logic_error("roundabout_manager::schedule this shouldn't happen");
+        }
+        _table.update(*target, new_front, traj_iter->entry_time, false);
+        pushed_vehicle = new_front;
       }
     }
 
     std::cout << "<VEH " << index << ", SEC " << target << ">" << std::endl;
 
     _table.push(*target, traj_iter->entry_time);
+
+    if (pushed_vehicle != -1) {
+      vehicle& v = _vehicles[pushed_vehicle];
+      v.cur_pos = _roundabout.position_of(*target);
+      v.entry_velocity = 0;
+      v.progress = v.entry;
+      schedule(pushed_vehicle, target);
+      pushed_vehicle = -1;
+    }
 
     ++target;
     ++veh.progress;

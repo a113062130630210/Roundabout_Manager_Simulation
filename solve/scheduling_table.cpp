@@ -30,7 +30,7 @@ void scheduling_table::load(int M, const std::vector<vehicle>& vehicles) {
 }
 
 bool scheduling_table::insert
-(int sec_id, int veh_index, double entry_time, bool scheduled) {
+(int sec_id, int veh_index, double entry_time, bool scheduled, bool is_entry) {
   auto& sec = _table[sec_id];
   auto it = std::ranges::find_if(sec, [veh_index](entry& i) {
     return i.index == veh_index;
@@ -41,7 +41,7 @@ bool scheduling_table::insert
     return i.entry_time >= entry_time;
   });
 
-  sec.insert(it, { veh_index, entry_time, scheduled, false });
+  sec.insert(it, { veh_index, entry_time, scheduled, is_entry });
   return true;
 }
 
@@ -51,10 +51,11 @@ bool scheduling_table::update
   auto it = std::ranges::find_if(sec, [veh_index](entry& i) {
     return i.index == veh_index;
   });
-  
+
   if (it == sec.end()) return false;
+  bool is_entry = it->is_entry;
   sec.erase(it);
-  insert(sec_id, veh_index, entry_time, scheduled);
+  insert(sec_id, veh_index, entry_time, scheduled, is_entry);
   return true;
 }
 
