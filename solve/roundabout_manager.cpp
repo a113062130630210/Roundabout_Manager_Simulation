@@ -109,12 +109,7 @@ void roundabout_manager::schedule(int index, modular<int> target) {
         }
       }
       if (iter < trajs.begin()) {
-        // for (auto& v: _vehicles) {
-        //   for (auto& t: v.trajs) {
-        //     std::cout << t;
-        //   }
-        //   std::cout << std::endl;
-        // }
+        // std::cout << veh << top_traj;
         throw std::logic_error("roundabout_manager::schedule ok this happened");
       }
     }

@@ -28,8 +28,9 @@ public:
 
   std::optional<trajectory> place_on_top(trajectory, double) const;
   bool conflict_with(trajectory) const;
-  trajectory& push_sub_traj(double, double);
-  trajectory& push_sub_traj(double, double, double);
+  bool conflict_with(subtrajectory) const;
+  trajectory& push_sub_traj(double, double, bool = true);
+  trajectory& push_sub_traj(double, double, double, bool = true);
   void split(t_iter, const t_iter&) const;
   void clear_trajs();
 

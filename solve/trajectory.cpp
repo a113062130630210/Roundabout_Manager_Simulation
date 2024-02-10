@@ -101,45 +101,55 @@ trajectory::place_on_top(trajectory t, double ring_len) const {
     for (auto t_it = t.sub_trajs.end()-1; t_it >= t.sub_trajs.begin(); --t_it) {
       if (t_it->leave_position + 1e-10 < s_it->entry_position) continue;
 
+      std::optional<trajectory> result;
+      bool feasible = false;
       if (t_it->acc != MIN_A) {
-        auto solution = find_tangent(s_it, t_it, t.sub_trajs.end());
-        if (!solution) continue;
+        if (auto solution = find_tangent(s_it, t_it, t.sub_trajs.end())) {
+          feasible = true;
+          auto [t_star, t_tang] = solution.value();
+          if (t_tang <= t_it->leave_time) {
+            trajectory _result(s.entry_time, s.entry_position, t.leave_position, s.entry_velocity);
+            for (auto it = s.sub_trajs.begin(); it < s_it; ++it) {
+              _result.push_sub_traj(it->leave_time, it->acc);
+            }
+            _result.push_sub_traj(t_star, s_it->acc);
+            _result.push_sub_traj(t_tang, MIN_A);
+            _result.push_sub_traj(-1, t_it->acc, t_it->leave_position);
 
-        auto [t_star, t_tang] = solution.value();
+            for (auto it = t_it + 1; it != t.sub_trajs.end(); it++) {
+              _result.push_sub_traj(-1, it->acc, it->leave_position);
+            }
 
-        trajectory result(s.entry_time, s.entry_position, t.leave_position, s.entry_velocity);
-        for (auto it = s.sub_trajs.begin(); it < s_it; ++it) {
-          result.push_sub_traj(it->leave_time, it->acc);
-        }
-
-        if (t_tang <= t_it->leave_time) {
-          result.push_sub_traj(t_star, s_it->acc);
-          result.push_sub_traj(t_tang, MIN_A);
-          result.push_sub_traj(-1, t_it->acc, t_it->leave_position);
-
-          for (auto it = t_it + 1; it != t.sub_trajs.end(); it++) {
-            result.push_sub_traj(-1, it->acc, it->leave_position);
+            if (fabs(_result.leave_time - t.leave_time) <= 1e-10) {
+              return _result;
+            }
+            result = _result;
           }
-          return result;
         }
       }
 
-      if (t_it == t.sub_trajs.end() - 1) {
-        auto solution = find_point(s_it, t_it);
-        if (!solution) continue;
+      if ((t_it->acc == MIN_A || feasible) && (t_it == t.sub_trajs.end() - 1)) {
+        if (auto solution = find_point(s_it, t_it)) {
+          auto t_star = solution.value();
+          trajectory _result(s.entry_time, s.entry_position, t.leave_position, s.entry_velocity);
+          for (auto it = s.sub_trajs.begin(); it < s_it; ++it) {
+            _result.push_sub_traj(it->leave_time, it->acc);
+          }
+          _result.push_sub_traj(t_star, s_it->acc);
+          _result.push_sub_traj(-1, MIN_A, t_it->leave_position);
 
-        auto t_star = solution.value();
-        trajectory result(s.entry_time, s.entry_position, t.leave_position, s.entry_velocity);
-        for (auto it = s.sub_trajs.begin(); it < s_it; ++it) {
-          result.push_sub_traj(it->leave_time, it->acc);
-        }
-        result.push_sub_traj(t_star, s_it->acc);
-        result.push_sub_traj(-1, MIN_A, t_it->leave_position);
+          for (auto it = t_it + 1; it != t.sub_trajs.end(); it++) {
+            _result.push_sub_traj(-1, it->acc, it->leave_position);
+          }
 
-        for (auto it = t_it + 1; it != t.sub_trajs.end(); it++) {
-          result.push_sub_traj(-1, it->acc, it->leave_position);
+          if (!_result.conflict_with(*t_it)) {
+            return _result;
+          }
         }
-        return result;
+      }
+
+      if (result) {
+        return result.value();
       }
     }
   }
@@ -156,12 +166,16 @@ std::optional<std::pair<double, double>> trajectory::find_tangent
 
   auto& [sol1, sol2] = solutions.value();
   if (
-    s_it->entry_time <= sol1.first + 1e-10 && sol1.first <= sol1.second + 1e-10 && 
+    s_it->entry_time <= sol1.first + 1e-10 && 
+    sol1.first <= sol1.second + 1e-10 && 
+    sol1.first <= s_it->leave_time + 1e-10 &&
     (sol1.second <= t_it->leave_time + 1e-10 || t_it == t_end - 1)
   ) return sol1;
 
   if (
-    s_it->entry_time <= sol2.first + 1e-10 && sol2.first <= sol2.second + 1e-10 && 
+    s_it->entry_time <= sol2.first + 1e-10 && 
+    sol2.first <= sol2.second + 1e-10 && 
+    sol2.first <= s_it->leave_time + 1e-10 &&
     (sol2.second <= t_it->leave_time + 1e-10 || t_it == t_end - 1)
   ) return sol2;
 
@@ -177,11 +191,20 @@ trajectory::find_point(const st_iter& s_it, const st_iter& t_it) const {
   if (!solutions) return std::nullopt;
 
   auto& [sol1, sol2] = solutions.value();
-  if (s_it->entry_time <= sol1 + 1e-10 && sol1 <= t_it->leave_time + 1e-10) return sol1;
-  if (s_it->entry_time <= sol2 + 1e-10 && sol2 <= t_it->leave_time + 1e-10) return sol2;
+  double a = s_it->acc - MIN_A;
+  double b = s_it->entry_velocity - s_it->acc * s_it->entry_time + MIN_A * t_it->leave_time;
+  if (
+    s_it->entry_time <= sol1 + 1e-10 && sol1 <= s_it->leave_time + 1e-10 &&
+    sol1 <= t_it->leave_time + 1e-10 && a * sol1 + b + 1e-10 >= 0
+  ) return sol1;
+  if (
+    s_it->entry_time <= sol2 + 1e-10 && sol2 <= s_it->leave_time + 1e-10 &&
+    sol2 <= t_it->leave_time + 1e-10 && a * sol2 + b + 1e-10 >= 0
+  ) return sol2;
   return std::nullopt;
 }
 
+// TODO: fix inconsistent shifting
 bool trajectory::conflict_with(trajectory t) const {
   t.entry_time += TIME_GAP;
   t.leave_time += TIME_GAP;
@@ -203,12 +226,19 @@ bool trajectory::conflict_with(trajectory t) const {
   return false;
 }
 
+bool trajectory::conflict_with(subtrajectory st) const {
+  for (auto& s_st: sub_trajs) {
+    if (s_st.conflict_with(st)) return true;
+  }
+  return false;
+}
+
 void trajectory::split(t_iter iter, const t_iter& end) const {
   auto st_iter = sub_trajs.cbegin();
   iter->entry_time = entry_time;
   iter->entry_velocity = entry_velocity;
   iter->clear_trajs();
-  iter->push_sub_traj(-1, st_iter->acc);
+  iter->push_sub_traj(-1, st_iter->acc, false);
 
   while (true) {
     if (iter->leave_time > st_iter->leave_time + 1e-10) {
@@ -216,7 +246,7 @@ void trajectory::split(t_iter iter, const t_iter& end) const {
       iter->push_sub_traj(st_iter->leave_time, st_iter->acc);
       ++st_iter;
       if (st_iter == sub_trajs.cend()) return;
-      iter->push_sub_traj(-1, st_iter->acc);
+      iter->push_sub_traj(-1, st_iter->acc, false);
     }
     else {
       if (fabs(iter->leave_time - st_iter->leave_time) <= 1e-10) {
@@ -228,18 +258,21 @@ void trajectory::split(t_iter iter, const t_iter& end) const {
       iter->entry_time = (iter-1)->leave_time;
       iter->entry_velocity = (iter-1)->leave_velocity;
       iter->clear_trajs();
-      iter->push_sub_traj(-1, st_iter->acc);
+      iter->push_sub_traj(-1, st_iter->acc, false);
     }
   }
 
   throw std::logic_error("trajectory::split this should not happen");
 }
 
-trajectory& trajectory::push_sub_traj(double end_time, double acc) {
-  return push_sub_traj(end_time, acc, leave_position);
+// TODO: remove vel_check
+trajectory& trajectory::push_sub_traj
+(double end_time, double acc, bool vel_check) {
+  return push_sub_traj(end_time, acc, leave_position, vel_check);
 }
 
-trajectory& trajectory::push_sub_traj(double end_time, double acc, double lp) {
+trajectory& trajectory::push_sub_traj
+(double end_time, double acc, double lp, bool vel_check) {
   double et, ex, ev;
   if (sub_trajs.empty()) {
     et = entry_time;
@@ -278,6 +311,9 @@ trajectory& trajectory::push_sub_traj(double end_time, double acc, double lp) {
 
   if (lx > leave_position + 1e-10) {
     throw std::logic_error("trajectory::push_sub_traj position out of range");
+  }
+  if (vel_check && (lv > MAX_V + 1e-10)) {
+    throw std::logic_error("trajectory::push_sub_traj velocity out of range");
   }
 
   leave_time = end_time;
