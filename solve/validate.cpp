@@ -38,6 +38,7 @@ public:
 	
 	std::vector<double> times;
 	std::vector<double> accelerations;
+	std::vector<double> velocities;
 	// Assume that the acceleration is the same between two consecutive time
 };
 
@@ -181,6 +182,13 @@ void check_output_file_is_valid_format(std::string output_filename) {
 }
 
 
+void check_exit_time_bigger_than_arrival_time() {
+	for (Vehicle v : vehicles) {
+		// TODO
+	}
+}
+
+
 void check_acceleration_constraint() {
 	for (Vehicle v : vehicles) {
 		for (const auto & a : v.accelerations) {
@@ -193,15 +201,18 @@ void check_acceleration_constraint() {
 
 void check_velocity_constraint() {
 	for (Vehicle v : vehicles) {
+		v.velocities.push_back(v.velocity);
 		if (v.velocity > MAX_V) EXIT("Vehicle id " + std::to_string(v.id) + " velocity " + std::to_string(v.velocity) + " is over maximum " + std::to_string(MAX_V));
 		for (int i = 1 ; i < v.times.size() ; i++) {
 			double time_period = v.times[i] - v.times[i - 1];
 			v.velocity += time_period * v.accelerations[i - 1];
+			v.velocities.push_back(v.velocity);
 			if (v.velocity > MAX_V) EXIT("Vehicle id " + std::to_string(v.id) + " velocity " + std::to_string(v.velocity) + " is over maximum " + std::to_string(MAX_V));
 		}
 
 		double time_period = v.exitTime - v.times[v.times.size() - 1];
 		v.velocity += time_period * v.accelerations[v.times.size() - 1];
+		v.velocities.push_back(v.velocity);
 		if (v.velocity > MAX_V) EXIT("Vehicle id " + std::to_string(v.id) + " velocity " + std::to_string(v.velocity) + " is over maximum " + std::to_string(MAX_V));
 	}	
 }
@@ -209,13 +220,46 @@ void check_velocity_constraint() {
 
 
 void check_no_overtaking() {
-
+	// TODO
 }
 
 
 
 void check_safety_time_margin() {
+	for (Vehicle v1 : vehicles) {
+		for (int i = 1 ; i < v1.times.size() ; i++) {
+			double time_start = v1.times[i - 1];
+			double time_end = v1.times[i];
+			double v = v1.velocities[i - 1];
+			double a = v1.accelerations[i - 1];
+			// v * t + 1/2 a * t^2 (time_start <= t <= time_end)
+			for (Vehicle v2 : vehicles) {
+				if (v1.vehicle_id == v2.vehicle_id) continue;
+				if (v2.exitTime <= time_start) continue;
+				if (v2.earlistArrivalTime >= time_end) continue;
+				if (v2.times[0] >= time_start) {
+					// TODO
+				}
+				for (int j = 1 ; j < v2.times.size() ; j++) {
+					if (v2.times[j - 1] <= time_start && v2.times[j] >= time_start) {
+						double time_start_2 = v2.times[j - 1];
+						double time_end_2 = v2.times[j];
+						double v_2 = v2.velocities[j - 1];
+						double a_2 = v2.accelerations[j - 1];
+					}
+				}
 
+				for (int k = 1 ; k < v2.times.size() ; k++) {
+					if (v2.times[k - 1] <= time_end && v2.times[k] >= time_end) {
+						double time_start_3 = v2.times[k - 1];
+						double time_end_3 = v2.times[k];
+						double v_3 = v2.velocities[k - 1];
+						double a_3 = v2.accelerations[k - 1];
+					}
+				}
+			}
+		}
+	}
 }
 
 
@@ -250,6 +294,7 @@ int main(int argc, char* argv[]) {
 	check_output_file_is_valid_format(output_filename);
 
 	// TODO: exit time should exceed earlist arrival time
+	check_exit_time_bigger_than_arrival_time();
 	check_acceleration_constraint();
 	check_velocity_constraint();
 	check_no_overtaking();
