@@ -1,0 +1,6 @@
+# Input File Format
+```
+<number of vehicles> <number of sections> <length of each section> ...
+<vehicle id> <entry section> <exit section> <arrival time> <initial velocity>
+...
+```
