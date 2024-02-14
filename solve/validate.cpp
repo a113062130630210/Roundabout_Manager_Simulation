@@ -1,6 +1,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <cmath>
 
 #include "constants.hpp"
 
@@ -224,6 +225,25 @@ void check_no_overtaking() {
 }
 
 
+void solve_quadric_equation(double v1, double v2, double a1, double a2, double time_start, double time_end) {
+    // first
+    double check_1 = (v1 - v2 - a2 * TIME_GAP) * (v1 - v2 - a2 * TIME_GAP) + (a1 - a2) * (a2 * TIME_GAP * TIME_GAP + 2 * v2 * TIME_GAP);
+    if (check_1 >= 0) {
+        double t1 = ((v2 + a2 * TIME_GAP - v1) + sqrt(check_1)) / (a1 - a2);
+        double t2 = ((v2 + a2 * TIME_GAP - v1) - sqrt(check_1)) / (a1 - a2);
+        if (t1 >= time_start && t1 <= time_end) EXIT("collision");
+        if (t2 >= time_start && t2 <= time_end) EXIT("collision");
+    }
+    // second
+    double check_2 = (v1 - v2 + a2 * TIME_GAP) * (v1 - v2 + a2 * TIME_GAP) + (a1 - a2) * (a2 * TIME_GAP * TIME_GAP - 2 * v2 * TIME_GAP);
+    if (check_2 >= 0) {
+        double t1 = ((v2 - a2 * TIME_GAP - v1) + sqrt(check_2)) / (a1 - a2);
+        double t2 = ((v2 - a2 * TIME_GAP - v1) - sqrt(check_2)) / (a1 - a2);
+        if (t1 >= time_start && t1 <= time_end) EXIT("collision");
+        if (t2 >= time_start && t2 <= time_end) EXIT("collision");
+    }
+}
+
 
 void check_safety_time_margin() {
 	for (Vehicle v1 : vehicles) {
@@ -240,12 +260,17 @@ void check_safety_time_margin() {
 				if (v2.times[0] >= time_start) {
 					// TODO
 				}
+
+                int start_index;
+                int end_index;
 				for (int j = 1 ; j < v2.times.size() ; j++) {
 					if (v2.times[j - 1] <= time_start && v2.times[j] >= time_start) {
-						double time_start_2 = v2.times[j - 1];
 						double time_end_2 = v2.times[j];
 						double v_2 = v2.velocities[j - 1];
 						double a_2 = v2.accelerations[j - 1];
+                        // v * (t - c) + 1/2 a * t ^ 2
+                        v_2 * (t - TIME_GAP)
+                        break;
 					}
 				}
 
@@ -255,8 +280,10 @@ void check_safety_time_margin() {
 						double time_end_3 = v2.times[k];
 						double v_3 = v2.velocities[k - 1];
 						double a_3 = v2.accelerations[k - 1];
+                        break;
 					}
 				}
+                                
 			}
 		}
 	}
