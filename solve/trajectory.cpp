@@ -102,10 +102,8 @@ trajectory::place_on_top(trajectory t, double ring_len) const {
       if (t_it->leave_position + 1e-10 < s_it->entry_position) continue;
 
       std::optional<trajectory> result;
-      bool feasible = false;
       if (t_it->acc != MIN_A) {
         if (auto solution = find_tangent(s_it, t_it, t.sub_trajs.end())) {
-          feasible = true;
           auto [t_star, t_tang] = solution.value();
           if (t_tang <= t_it->leave_time) {
             trajectory _result(s.entry_time, s.entry_position, t.leave_position, s.entry_velocity);
@@ -128,6 +126,10 @@ trajectory::place_on_top(trajectory t, double ring_len) const {
           }
         }
       }
+
+      trajectory temp(s_it->entry_time, s_it->entry_position, t.leave_position, s_it->entry_velocity);
+      temp.push_sub_traj(-1, MIN_A);
+      bool feasible = !temp.conflict_with(*t_it);
 
       if ((t_it->acc == MIN_A || feasible) && (t_it == t.sub_trajs.end() - 1)) {
         if (auto solution = find_point(s_it, t_it)) {
@@ -240,7 +242,7 @@ trajectory::find_acc(const st_iter& s_it, const st_iter& t_it) const {
   );
   if (
     s_it->entry_time <= t_sol + 1e-10 && t_sol <= s_it->leave_time + 1e-10 &&
-    MIN_A <= a_sol && a_sol <= MAX_A
+    t_sol <= t_it->entry_time + 1e-10 && MIN_A <= a_sol && a_sol <= MAX_A
   ) return std::make_pair(t_sol, a_sol);
   return std::nullopt;
 }
