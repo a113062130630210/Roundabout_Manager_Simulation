@@ -14,3 +14,7 @@ tangent_solver
 std::optional<std::pair<double, double>>
 point_solver
 (double, double, double, double, double, double);
+
+std::pair<double, double>
+acc_solver
+(double, double, double, double, double, double, double);

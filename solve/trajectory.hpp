@@ -51,6 +51,8 @@ private:
   find_tangent(const st_iter&, const st_iter&, const st_iter&) const;
   std::optional<double>
   find_point(const st_iter&, const st_iter&) const;
+  std::optional<std::pair<double, double>>
+  find_acc(const st_iter&, const st_iter&) const;
 };
 
 std::ostream& operator<<(std::ostream& os, const subtrajectory& st);

@@ -97,3 +97,12 @@ point_solver(double t1, double x1, double v1, double a1, double t, double x) {
   delta = sqrt(delta) / da;
   return std::make_pair(t - delta, t + delta);
 }
+
+std::pair<double, double> acc_solver
+(double t1, double x1, double v1, double a1, double t, double x, double v) {
+  double denom = v1 - v + a1*(t - t1);
+  double num = 2 * (v1*t1 - x1 + x) - t*(v1 + v) - a1*t1*(t1 - t);
+  double t_ans = num / denom;
+  double a_ans = t_ans == t ? 0 : ((v - (v1 + a1*(t_ans - t1))) / (t - t_ans));
+  return std::make_pair(t_ans, a_ans);
+}

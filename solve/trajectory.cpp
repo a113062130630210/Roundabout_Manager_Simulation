@@ -112,6 +112,7 @@ trajectory::place_on_top(trajectory t, double ring_len) const {
             for (auto it = s.sub_trajs.begin(); it < s_it; ++it) {
               _result.push_sub_traj(it->leave_time, it->acc);
             }
+
             _result.push_sub_traj(t_star, s_it->acc);
             _result.push_sub_traj(t_tang, MIN_A);
             _result.push_sub_traj(-1, t_it->acc, t_it->leave_position);
@@ -135,6 +136,7 @@ trajectory::place_on_top(trajectory t, double ring_len) const {
           for (auto it = s.sub_trajs.begin(); it < s_it; ++it) {
             _result.push_sub_traj(it->leave_time, it->acc);
           }
+
           _result.push_sub_traj(t_star, s_it->acc);
           _result.push_sub_traj(-1, MIN_A, t_it->leave_position);
 
@@ -148,9 +150,28 @@ trajectory::place_on_top(trajectory t, double ring_len) const {
         }
       }
 
-      if (result) {
-        return result.value();
+      if (!feasible && s_it->entry_position < t_it->entry_position) {
+        if (auto solution = find_acc(s_it, t_it)) {
+          auto [t_sol, a_sol] = solution.value();
+          trajectory _result(s.entry_time, s.entry_position, t.leave_position, s.entry_velocity);
+          for (auto it = s.sub_trajs.begin(); it < s_it; ++it) {
+            _result.push_sub_traj(it->leave_time, it->acc);
+          }
+
+          _result.push_sub_traj(t_sol, s_it->acc);
+          _result.push_sub_traj(-1, a_sol, t_it->leave_position);
+
+          for (auto it = t_it + 1; it != t.sub_trajs.end(); it++) {
+            _result.push_sub_traj(-1, it->acc, it->leave_position);
+          }
+
+          if (!_result.conflict_with(*t_it)) {
+            return _result;
+          }
+        }
       }
+
+      if (result) return result;
     }
   }
   return std::nullopt;
@@ -208,6 +229,19 @@ trajectory::find_point(const st_iter& s_it, const st_iter& t_it) const {
     s_it->entry_time <= sol2 + 1e-10 && sol2 <= s_it->leave_time + 1e-10 &&
     sol2 <= t_it->leave_time + 1e-10 && a1 * sol2 + b1 + 1e-10 >= 0 && a2 * sol2 + b2 + 1e-10 >= 0
   ) return sol2;
+  return std::nullopt;
+}
+
+std::optional<std::pair<double, double>>
+trajectory::find_acc(const st_iter& s_it, const st_iter& t_it) const {
+  auto [t_sol, a_sol] = acc_solver(
+    s_it->entry_time, s_it->entry_position, s_it->entry_velocity, s_it->acc, 
+    t_it->entry_time, t_it->entry_position, t_it->entry_velocity
+  );
+  if (
+    s_it->entry_time <= t_sol + 1e-10 && t_sol <= s_it->leave_time + 1e-10 &&
+    MIN_A <= a_sol && a_sol <= MAX_A
+  ) return std::make_pair(t_sol, a_sol);
   return std::nullopt;
 }
 

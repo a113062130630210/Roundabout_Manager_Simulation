@@ -15,7 +15,9 @@ entry_time(at), cur_pos(cp), entry_velocity(iv) {
 std::vector<trajectory>::iterator
 vehicle::get_traj(const modular<int>& sec_id) {
   int index = *(sec_id - entry);
-  if (index > *(exit - entry)) return trajs.end();
+  if (index > *(exit - entry)) {
+    throw std::logic_error("vehicle::get_traj trajectory not found");
+  }
   return trajs.begin() + index;
 }
 
@@ -74,7 +76,7 @@ std::ostream& operator<<(std::ostream& os, const trajectory& t) {
 }
 
 std::ostream& operator<<(std::ostream& os, const vehicle& v) {
-  os << "[Vehicle " << v.id << "]\n"
+  os << "[Vehicle " << v.index << "]\n"
      << "\tentry:          " << v.entry << "\n"
      << "\texit:           " << v.exit << "\n"
      << "\tentry_time:   " << v.entry_time << "\n"
